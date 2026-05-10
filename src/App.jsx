@@ -10,6 +10,7 @@ import Profile     from "./components/Profile";
 import Leaderboard from "./components/Leaderboard";
 import Levels      from "./components/Levels";
 import { getLevelData, shortAddr } from "./lib/gameData";
+import WalletModal from "./components/WalletModal";
 
 const TABS = [
   { id:"FARM",        icon:"🌾" },
@@ -20,7 +21,8 @@ const TABS = [
 ];
 
 export default function App() {
-  const [tab, setTab]     = useState("FARM");
+  const [tab, setTab]           = useState("FARM");
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [log, setLog]     = useState(["🌍 PixelPlot — Connect wallet to start!"]);
 
@@ -33,31 +35,36 @@ export default function App() {
     setLog(prev => [msg, ...prev].slice(0, 7));
   }, []);
 
-  // Hooks
+  // ── Hooks ──
   const {
     wallet, plotBalance, gameBalance,
     connecting, connect, disconnect, refreshBalances, addGameBalance,
+    connectMetaMask, connectWalletConnect,
   } = useWallet();
 
   const {
     profile, leaderboard, lbLoading, savingProfile,
-    loadProfile, saveProfile, persistHarvest,
+    loadProfile, refreshProfile, saveProfile,
     updateProfileLocal, loadLeaderboard, clearProfile,
   } = useSupabase();
 
   const {
     inventory, buyingSeeds, withdrawing,
-    loadInventory, buySeeds, harvestOffChain, withdrawEarnings, spendSeed,
+    loadInventory, buySeeds, harvestOffChain,
+    withdrawEarnings, spendSeed,
   } = useContracts(wallet, showToast, addLog, refreshBalances);
 
-  // On wallet connect
-  const handleConnect = async () => {
-    const w = await connect();
+  // ── Connect wallet ──
+  const handleConnect = () => setShowWalletModal(true);
+
+  const doConnect = async (type) => {
+    setShowWalletModal(false);
+    const w = type === "wc" ? await connectWalletConnect() : await connectMetaMask();
     if (!w) return;
     showToast(`✅ Connected: ${shortAddr(w.address)}`, "#4caf50");
     addLog(`🔗 Wallet connected: ${shortAddr(w.address)}`);
     await loadProfile(w.address);
-    await loadInventory(w); // pass wallet directly — state may not be set yet
+    await loadInventory(w);
   };
 
   const handleDisconnect = () => {
@@ -66,11 +73,11 @@ export default function App() {
     showToast("Disconnected", "#5a4020");
   };
 
-  // Level up watcher
+  // ── Level up watcher ──
   const prevLevelRef = useRef(1);
   useEffect(() => {
     if (!profile) return;
-    const { cur } = getLevelData(profile.exp);
+    const { cur } = getLevelData(profile.exp || 0);
     if (cur.level > prevLevelRef.current) {
       showToast(`🎉 LEVEL UP! Lv.${cur.level} — ${cur.title}`, "#f0c060");
       addLog(`🎉 LEVEL UP! Now Lv.${cur.level} — ${cur.title}`);
@@ -78,31 +85,37 @@ export default function App() {
     }
   }, [profile?.exp]);
 
-  // Load leaderboard when tab opens
+  // ── Load leaderboard when tab opens ──
   useEffect(() => {
     if (tab === "LEADERBOARD") loadLeaderboard();
   }, [tab]);
 
-  // Harvest callback from Farm
-  // Harvest is now FREE (off-chain) — backend already updated Supabase
-  // We just sync local state to match what backend returned
-  const handleHarvest = useCallback((cropKey, earned, expGain, pendingEarnings) => {
-    if (!wallet || !profile) return;
+  // ── Harvest callback ──
+  // After harvest, refresh profile from Supabase to get accurate pending_earnings
+  const handleHarvest = useCallback(async (cropKey, earned, expGain, pendingEarnings) => {
+    // Optimistic update first for instant UI feedback
     updateProfileLocal({
-      exp:              (profile.exp || 0) + expGain,
-      total_harvested:  (profile.total_harvested || 0) + 1,
-      total_earned:     (profile.total_earned || 0) + earned,
+      exp:              (profile?.exp || 0) + expGain,
+      total_harvested:  (profile?.total_harvested || 0) + 1,
+      total_earned:     (profile?.total_earned || 0) + earned,
       pending_earnings: pendingEarnings,
     });
-  }, [wallet, profile, updateProfileLocal]);
+    // Then refresh from Supabase for accuracy
+    if (wallet) await refreshProfile(wallet.address);
+  }, [wallet, profile, updateProfileLocal, refreshProfile]);
 
+  // ── After planting, re-fetch inventory from contract ──
+  const handleAfterPlant = useCallback(async () => {
+    if (wallet) await loadInventory(wallet);
+  }, [wallet, loadInventory]);
+
+  // Derived
   const exp = profile?.exp ?? 0;
   const { cur: levelData, next: nextLevel } = getLevelData(exp);
-  const level      = levelData.level;
-  const expPct     = nextLevel
+  const level   = levelData.level;
+  const expPct  = nextLevel
     ? ((exp - levelData.expReq) / (nextLevel.expReq - levelData.expReq)) * 100
     : 100;
-  const readyStr = ""; // Farm tracks this internally
 
   return (
     <div style={{
@@ -114,7 +127,17 @@ export default function App() {
       flexDirection: "column",
     }}>
 
-      {/* ── TOAST ── */}
+      {/* Wallet Modal */}
+      {showWalletModal && (
+        <WalletModal
+          connecting={connecting}
+          onMetaMask={() => doConnect("metamask")}
+          onWalletConnect={() => doConnect("wc")}
+          onClose={() => setShowWalletModal(false)}
+        />
+      )}
+
+      {/* Toast */}
       {toast && (
         <div style={{
           position:"fixed", top:"12px", left:"50%", transform:"translateX(-50%)",
@@ -129,7 +152,6 @@ export default function App() {
       {/* ── HEADER ── */}
       <div style={{ background:"#110e07", borderBottom:"1px solid #2a1e0a", padding:"10px 14px 8px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: wallet ? "10px" : "0" }}>
-          {/* Logo */}
           <div>
             <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE SEPOLIA</div>
             <div style={{ fontSize:"20px", fontWeight:900, color:"#f0c060", letterSpacing:"2px", textShadow:"0 0 16px #f0c06060" }}>
@@ -137,7 +159,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Wallet button or info */}
           {!wallet ? (
             <button onClick={handleConnect} disabled={connecting} style={{
               padding:"10px 16px", background:"#2a1f0a", border:"2px solid #f0c060",
@@ -166,14 +187,13 @@ export default function App() {
           )}
         </div>
 
-        {/* Wallet stats + bars */}
         {wallet && (
           <>
             <div style={{ display:"flex", gap:"14px", marginBottom:"8px" }}>
               {[
                 { label:"$PLOT Wallet", val:parseFloat(ethers.formatEther(plotBalance)).toFixed(2), color:"#f0c060" },
-                { label:"Game Balance", val:parseFloat(ethers.formatEther(gameBalance)).toFixed(2), color:"#4caf50" },
-                { label:"Total Earned", val:profile?.total_earned||0, color:"#9c7adb" },
+                { label:"Pending",      val:profile?.pending_earnings || 0,                         color:"#4caf50" },
+                { label:"Harvested",    val:profile?.total_harvested || 0,                          color:"#9c7adb" },
               ].map(s => (
                 <div key={s.label} style={{ textAlign:"center" }}>
                   <div style={{ fontSize:"12px", fontWeight:900, color:s.color }}>{s.val}</div>
@@ -184,7 +204,7 @@ export default function App() {
 
             {/* EXP bar */}
             <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-              <span style={{ fontSize:"8px", color:"#5a4020", width:"50px", flexShrink:0 }}>⭐ {exp} xp</span>
+              <span style={{ fontSize:"8px", color:"#5a4020", width:"50px", flexShrink:0 }}>⭐ {exp}</span>
               <div style={{ flex:1, height:"5px", background:"#1a1206", borderRadius:"3px", overflow:"hidden" }}>
                 <div style={{ height:"100%", width:`${expPct}%`, background:"#9c7adb", transition:"width 0.5s" }}/>
               </div>
@@ -212,7 +232,7 @@ export default function App() {
       {/* ── CONTENT ── */}
       <div style={{ flex:1, overflowY:"auto", padding:"12px", paddingBottom:tab==="FARM"?"80px":"12px" }}>
 
-        {/* Not connected landing */}
+        {/* Landing */}
         {!wallet && tab === "FARM" && (
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
             justifyContent:"center", padding:"60px 24px", textAlign:"center", gap:"16px" }}>
@@ -235,12 +255,16 @@ export default function App() {
         {tab === "FARM" && wallet && (
           <>
             <Farm
-              wallet={wallet} profile={profile} inventory={inventory}
-              showToast={showToast} addLog={addLog} spendSeed={spendSeed}
+              wallet={wallet}
+              profile={profile}
+              inventory={inventory}
+              showToast={showToast}
+              addLog={addLog}
+              spendSeed={spendSeed}
               onHarvest={handleHarvest}
               harvestOffChain={harvestOffChain}
+              onAfterPlant={handleAfterPlant}
             />
-            {/* Activity log */}
             <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px", marginTop:"10px" }}>
               <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020", marginBottom:"8px" }}>ACTIVITY LOG</div>
               {log.map((l, i) => (

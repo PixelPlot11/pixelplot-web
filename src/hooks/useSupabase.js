@@ -9,25 +9,19 @@ export function useSupabase() {
   const [lbLoading, setLbLoading]     = useState(false);
   const [savingProfile, setSaving]    = useState(false);
 
-  // Load or create profile
   const loadProfile = useCallback(async (address) => {
     const wallet = address.toLowerCase();
-
-    // maybeSingle() returns null instead of 406 when no row found
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("wallet", wallet)
       .maybeSingle();
 
-    if (error) console.error("loadProfile error:", error);
+    if (error) console.error("loadProfile:", error);
 
-    if (data) {
-      setProfile(data);
-      return data;
-    }
+    if (data) { setProfile(data); return data; }
 
-    // New player — create profile
+    // New player
     const { data: created, error: insertErr } = await supabase
       .from("profiles")
       .insert({
@@ -35,18 +29,31 @@ export function useSupabase() {
         username:        shortAddr(address),
         avatar:          "🧑‍🌾",
         exp:             0,
+        pending_earnings: 0,
         total_harvested: 0,
         total_earned:    0,
       })
       .select()
       .maybeSingle();
 
-    if (insertErr) console.error("createProfile error:", insertErr);
+    if (insertErr) console.error("createProfile:", insertErr);
     if (created) setProfile(created);
     return created;
   }, []);
 
-  // Save username + avatar
+  // Refresh profile dari Supabase (dipanggil setelah harvest)
+  const refreshProfile = useCallback(async (address) => {
+    if (!address) return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("wallet", address.toLowerCase())
+      .maybeSingle();
+    if (error) { console.error("refreshProfile:", error); return; }
+    if (data) setProfile(data);
+    return data;
+  }, []);
+
   const saveProfile = useCallback(async (address, username, avatar) => {
     setSaving(true);
     const { data, error } = await supabase
@@ -55,38 +62,24 @@ export function useSupabase() {
       .eq("wallet", address.toLowerCase())
       .select()
       .maybeSingle();
-    if (error) console.error("saveProfile error:", error);
+    if (error) console.error("saveProfile:", error);
     if (data) setProfile(data);
     setSaving(false);
     return data;
   }, []);
 
-  // Persist EXP + stats after harvest
-  const persistHarvest = useCallback(async (address, newExp, newHarvested, newEarned) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({ exp: newExp, total_harvested: newHarvested, total_earned: newEarned })
-      .eq("wallet", address.toLowerCase())
-      .select()
-      .maybeSingle();
-    if (error) console.error("persistHarvest error:", error);
-    if (data) setProfile(data);
-  }, []);
-
-  // Update profile locally (optimistic)
   const updateProfileLocal = useCallback((updates) => {
     setProfile(prev => prev ? { ...prev, ...updates } : prev);
   }, []);
 
-  // Load leaderboard
   const loadLeaderboard = useCallback(async () => {
     setLbLoading(true);
     const { data, error } = await supabase
       .from("profiles")
-      .select("wallet, username, avatar, exp, total_harvested, total_earned")
+      .select("wallet, username, avatar, exp, total_harvested, total_earned, pending_earnings")
       .order("exp", { ascending: false })
       .limit(20);
-    if (error) console.error("leaderboard error:", error);
+    if (error) console.error("leaderboard:", error);
     setLeaderboard(data || []);
     setLbLoading(false);
   }, []);
@@ -95,7 +88,7 @@ export function useSupabase() {
 
   return {
     profile, leaderboard, lbLoading, savingProfile,
-    loadProfile, saveProfile, persistHarvest,
+    loadProfile, refreshProfile, saveProfile,
     updateProfileLocal, loadLeaderboard, clearProfile,
   };
 }

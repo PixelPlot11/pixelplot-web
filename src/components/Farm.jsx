@@ -73,7 +73,7 @@ function loadEnergy(walletAddress) {
 export default function Farm({
   wallet, profile, inventory,
   showToast, addLog, spendSeed,
-  onHarvest, harvestOffChain,
+  onHarvest, harvestOffChain, onAfterPlant,
 }) {
   const walletAddr = wallet?.address?.toLowerCase() || "";
 
@@ -177,6 +177,8 @@ export default function Farm({
         return n;
       });
       addLog(`🌱 Planted ${c.name} [−${c.eP}⚡]`);
+      // Re-fetch inventory from contract to sync accurate count
+      if (onAfterPlant) onAfterPlant();
     }
     else if (action === "water") {
       if (!p.crop || p.watered || p.ready) { showToast("⚠️ Can't water here!"); return; }

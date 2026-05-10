@@ -1,7 +1,11 @@
 // src/hooks/useWallet.js
+// Supports MetaMask + WalletConnect (mobile wallets: Bitget, OKX, Trust, etc)
 import { useState, useCallback } from "react";
 import { ethers } from "ethers";
 import { CONFIG, ERC20_ABI, GAME_ABI } from "../lib/config";
+
+// WalletConnect Project ID — daftar gratis di https://cloud.walletconnect.com
+const WC_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "";
 
 export function useWallet() {
   const [wallet, setWallet]           = useState(null);
@@ -9,77 +13,110 @@ export function useWallet() {
   const [gameBalance, setGameBalance] = useState(0n);
   const [connecting, setConnecting]   = useState(false);
   const [wrongChain, setWrongChain]   = useState(false);
+  const [connectType, setConnectType] = useState(null); // "metamask" | "walletconnect"
 
   const loadBalances = useCallback(async (address, provider) => {
     try {
       const token = new ethers.Contract(CONFIG.PLOT_TOKEN_ADDRESS, ERC20_ABI, provider);
       setPlotBalance(await token.balanceOf(address));
-    } catch (e) {
-      console.error("plotBalance error:", e);
-      setPlotBalance(0n);
-    }
+    } catch { setPlotBalance(0n); }
     try {
       const game = new ethers.Contract(CONFIG.GAME_CONTRACT_ADDRESS, GAME_ABI, provider);
-      // Always fetch from contract — source of truth
-      const bal = await game.getGameBalance(address);
-      setGameBalance(bal);
-    } catch (e) {
-      console.error("gameBalance error:", e);
-      setGameBalance(0n);
-    }
+      setGameBalance(await game.getGameBalance(address));
+    } catch { setGameBalance(0n); }
   }, []);
 
-  const connect = useCallback(async () => {
+  const setupWallet = useCallback(async (provider) => {
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== CONFIG.BASE_CHAIN_ID) {
+      try {
+        await provider.send("wallet_switchEthereumChain", [
+          { chainId: `0x${CONFIG.BASE_CHAIN_ID.toString(16)}` }
+        ]);
+      } catch {
+        try {
+          await provider.send("wallet_addEthereumChain", [{
+            chainId:         `0x${CONFIG.BASE_CHAIN_ID.toString(16)}`,
+            chainName:       "Base Sepolia",
+            nativeCurrency:  { name:"ETH", symbol:"ETH", decimals:18 },
+            rpcUrls:         ["https://sepolia.base.org"],
+            blockExplorerUrls: ["https://sepolia.basescan.org"],
+          }]);
+        } catch (e) {
+          throw new Error("Please switch to Base Sepolia network");
+        }
+      }
+    }
+    const signer  = await provider.getSigner();
+    const address = await signer.getAddress();
+    return { address, provider, signer };
+  }, []);
+
+  // ── MetaMask / Browser Wallet ─────────────────
+  const connectMetaMask = useCallback(async () => {
     if (!window.ethereum) {
-      alert("Please install MetaMask!");
+      alert("MetaMask not found! Install MetaMask or use WalletConnect.");
       return null;
     }
     setConnecting(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
-
-      const network = await provider.getNetwork();
-      if (Number(network.chainId) !== CONFIG.BASE_CHAIN_ID) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: `0x${CONFIG.BASE_CHAIN_ID.toString(16)}` }],
-          });
-        } catch {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [{
-              chainId: `0x${CONFIG.BASE_CHAIN_ID.toString(16)}`,
-              chainName: "Base Sepolia",
-              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-              rpcUrls: ["https://sepolia.base.org"],
-              blockExplorerUrls: ["https://sepolia.basescan.org"],
-            }],
-          });
-        }
-      }
-
-      const signer  = await provider.getSigner();
-      const address = await signer.getAddress();
-      const w       = { address, provider, signer };
+      const w = await setupWallet(provider);
       setWallet(w);
+      setConnectType("metamask");
       setWrongChain(false);
-      // Fetch real balances from contract immediately
-      await loadBalances(address, provider);
+      await loadBalances(w.address, w.provider);
       return w;
     } catch (e) {
-      console.error("Connect error:", e);
+      console.error("MetaMask connect:", e);
       return null;
     } finally {
       setConnecting(false);
     }
-  }, [loadBalances]);
+  }, [setupWallet, loadBalances]);
+
+  // ── WalletConnect (mobile wallets) ───────────
+  const connectWalletConnect = useCallback(async () => {
+    setConnecting(true);
+    try {
+      // Dynamic import — only load when needed
+      const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+
+      const wcProvider = await EthereumProvider.init({
+        projectId: WC_PROJECT_ID,
+        chains:    [CONFIG.BASE_CHAIN_ID],
+        showQrModal: true,
+        metadata: {
+          name:        "PixelPlot",
+          description: "Web3 Farming Game on Base",
+          url:         window.location.origin,
+          icons:       [`${window.location.origin}/favicon.ico`],
+        },
+      });
+
+      await wcProvider.connect();
+      const provider = new ethers.BrowserProvider(wcProvider);
+      const w        = await setupWallet(provider);
+
+      setWallet(w);
+      setConnectType("walletconnect");
+      setWrongChain(false);
+      await loadBalances(w.address, w.provider);
+      return w;
+    } catch (e) {
+      console.error("WalletConnect:", e);
+      return null;
+    } finally {
+      setConnecting(false);
+    }
+  }, [setupWallet, loadBalances]);
 
   const disconnect = useCallback(() => {
     setWallet(null);
     setPlotBalance(0n);
     setGameBalance(0n);
+    setConnectType(null);
   }, []);
 
   const refreshBalances = useCallback(async () => {
@@ -87,15 +124,15 @@ export function useWallet() {
     await loadBalances(wallet.address, wallet.provider);
   }, [wallet, loadBalances]);
 
-  // Called after harvest — adds to local state optimistically
-  // Real value confirmed on next refreshBalances()
   const addGameBalance = useCallback((amount) => {
     setGameBalance(prev => prev + amount);
   }, []);
 
   return {
     wallet, plotBalance, gameBalance,
-    connecting, wrongChain,
-    connect, disconnect, refreshBalances, addGameBalance,
+    connecting, wrongChain, connectType,
+    connectMetaMask, connectWalletConnect,
+    connect: connectMetaMask, // backward compat
+    disconnect, refreshBalances, addGameBalance,
   };
 }
