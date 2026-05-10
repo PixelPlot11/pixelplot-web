@@ -72,8 +72,8 @@ function loadEnergy(walletAddress) {
 
 export default function Farm({
   wallet, profile, inventory,
-  showToast, addLog, spendSeed,
-  onHarvest, harvestOffChain, onAfterPlant,
+  showToast, addLog, spendSeed, spendSeedOnBackend,
+  onHarvest, harvestOffChain,
 }) {
   const walletAddr = wallet?.address?.toLowerCase() || "";
 
@@ -170,6 +170,7 @@ export default function Farm({
       const c = CROPS[selectedCrop];
       if (c.unlockLevel > level) { showToast("🔒 Crop not unlocked!"); return; }
       if (!spendEnergy(c.eP)) { showToast(`⚡ Need ${c.eP} energy!`, "#e04040"); return; }
+      // Optimistic local update first
       spendSeed(selectedCrop);
       setGrid(g => {
         const n = [...g];
@@ -177,8 +178,8 @@ export default function Farm({
         return n;
       });
       addLog(`🌱 Planted ${c.name} [−${c.eP}⚡]`);
-      // Re-fetch inventory from contract to sync accurate count
-      if (onAfterPlant) onAfterPlant();
+      // Sync to backend (decrement Supabase inventory)
+      spendSeedOnBackend(selectedCrop);
     }
     else if (action === "water") {
       if (!p.crop || p.watered || p.ready) { showToast("⚠️ Can't water here!"); return; }

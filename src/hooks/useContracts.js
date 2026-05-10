@@ -11,27 +11,28 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
 
   const BACKEND = CONFIG.BACKEND_URL || "http://localhost:3001";
 
-  // ── Load inventory from contract (source of truth) ──
+  // ── Load inventory from BACKEND (Supabase) ──
+  // Contract tracks purchase, backend tracks what's left to plant
   const loadInventory = useCallback(async (w) => {
     const target = w || wallet;
     if (!target) return;
     try {
-      const game = new ethers.Contract(CONFIG.GAME_CONTRACT_ADDRESS, GAME_ABI, target.provider);
-      const all  = await game.getAllSeeds(target.address);
-      const inv  = {};
-      Object.entries(CROPS).forEach(([key, c]) => { inv[key] = Number(all[c.id]); });
+      const res = await fetch(`${BACKEND}/api/inventory/${target.address}`);
+      if (!res.ok) throw new Error("Failed to load inventory");
+      const { inventory: inv } = await res.json();
       setInventory(inv);
       return inv;
     } catch (e) {
       console.error("loadInventory:", e);
+      // Fallback: all zero
       const inv = {};
       Object.keys(CROPS).forEach(k => inv[k] = 0);
       setInventory(inv);
       return inv;
     }
-  }, [wallet]);
+  }, [wallet, BACKEND]);
 
-  // ── Buy seeds ──────────────────────────────────
+  // ── Buy seeds — on-chain + sync backend inventory ──
   const buySeeds = useCallback(async (cropKey, qty) => {
     if (!wallet) { showToast("Connect wallet first!", "#e04040"); return; }
     const c         = CROPS[cropKey];
@@ -52,17 +53,25 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
       const tx = await game.buySeed(c.id, qty);
       await tx.wait();
 
+      // Sync to backend inventory
+      await fetch(`${BACKEND}/api/add-seeds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: wallet.address, cropKey, qty }),
+      });
+
       showToast(`✅ Bought ${qty}× ${c.name}!`, "#4caf50");
       addLog(`🛒 Bought ${qty}× ${c.name} [−${c.seedCost * qty} $PLOT]`);
 
-      // Re-fetch from contract — source of truth
+      // Refresh inventory from backend
       await loadInventory();
       await refreshBalances();
     } catch (e) {
       showToast(e.reason || "Transaction failed", "#e04040");
+      console.error("buySeeds:", e);
     }
     setBuying(null);
-  }, [wallet, showToast, addLog, loadInventory, refreshBalances]);
+  }, [wallet, BACKEND, showToast, addLog, loadInventory, refreshBalances]);
 
   // ── Harvest — FREE off-chain ──────────────────
   const harvestOffChain = useCallback(async (cropKey) => {
@@ -77,7 +86,7 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
         const err = await res.json();
         throw new Error(err.error || "Harvest failed");
       }
-      return await res.json(); // { earned, expGain, pendingEarnings, newExp }
+      return await res.json();
     } catch (e) {
       console.error("harvestOffChain:", e);
       showToast(e.message || "Harvest failed", "#e04040");
@@ -85,12 +94,31 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
     }
   }, [wallet, BACKEND, showToast]);
 
-  // ── Withdraw accumulated earnings (1 tx) ──────
+  // ── Spend seed — tells backend to decrement ──
+  const spendSeedOnBackend = useCallback(async (cropKey) => {
+    if (!wallet) return false;
+    try {
+      const res = await fetch(`${BACKEND}/api/spend-seed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: wallet.address, cropKey }),
+      });
+      if (!res.ok) return false;
+      const { remaining } = await res.json();
+      // Update local state immediately
+      setInventory(prev => ({ ...prev, [cropKey]: remaining }));
+      return true;
+    } catch (e) {
+      console.error("spendSeed:", e);
+      return false;
+    }
+  }, [wallet, BACKEND]);
+
+  // ── Withdraw ──────────────────────────────────
   const withdrawEarnings = useCallback(async () => {
     if (!wallet) return;
     setWithdrawing(true);
     try {
-      // 1. Sign accumulated pending
       showToast("⏳ Preparing withdrawal…", "#f0c060");
       const signRes = await fetch(`${BACKEND}/api/sign-withdraw`, {
         method: "POST",
@@ -105,7 +133,6 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
 
       const { signature, amount, nonce, pendingEarnings } = await signRes.json();
 
-      // 2. Check cooldown
       const game     = new ethers.Contract(CONFIG.GAME_CONTRACT_ADDRESS, GAME_ABI, wallet.signer);
       const cooldown = await game.withdrawCooldownRemaining(wallet.address);
       if (cooldown > 0n) {
@@ -115,16 +142,13 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
         return;
       }
 
-      // 3. addEarnings on-chain
       showToast("⏳ Submitting to blockchain…", "#f0c060");
       const addTx = await game.addEarnings(wallet.address, amount, nonce, signature);
       await addTx.wait();
 
-      // 4. Withdraw to wallet
       const wdTx = await game.withdraw(amount);
       await wdTx.wait();
 
-      // 5. Confirm to backend — clears pending
       await fetch(`${BACKEND}/api/confirm-withdraw`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -134,7 +158,6 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
       showToast(`✅ Withdrew ${pendingEarnings} $PLOT!`, "#4caf50");
       addLog(`💸 Withdrew ${pendingEarnings} $PLOT to wallet`);
       await refreshBalances();
-
     } catch (e) {
       console.error("withdraw:", e);
       showToast(e.reason || e.message || "Withdraw failed", "#e04040");
@@ -142,7 +165,7 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
     setWithdrawing(false);
   }, [wallet, BACKEND, showToast, addLog, refreshBalances]);
 
-  // Spend seed locally (optimistic) — Farm will re-fetch after plant
+  // Local optimistic spend (for immediate UI feedback)
   const spendSeed = useCallback((cropKey) => {
     setInventory(prev => ({
       ...prev,
@@ -153,6 +176,6 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
   return {
     inventory, buyingSeeds, withdrawing,
     loadInventory, buySeeds, harvestOffChain,
-    withdrawEarnings, spendSeed,
+    withdrawEarnings, spendSeed, spendSeedOnBackend,
   };
 }

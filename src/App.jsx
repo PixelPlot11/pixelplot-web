@@ -51,7 +51,7 @@ export default function App() {
   const {
     inventory, buyingSeeds, withdrawing,
     loadInventory, buySeeds, harvestOffChain,
-    withdrawEarnings, spendSeed,
+    withdrawEarnings, spendSeed, spendSeedOnBackend,
   } = useContracts(wallet, showToast, addLog, refreshBalances);
 
   // ── Connect wallet ──
@@ -104,10 +104,6 @@ export default function App() {
     if (wallet) await refreshProfile(wallet.address);
   }, [wallet, profile, updateProfileLocal, refreshProfile]);
 
-  // ── After planting, re-fetch inventory from contract ──
-  const handleAfterPlant = useCallback(async () => {
-    if (wallet) await loadInventory(wallet);
-  }, [wallet, loadInventory]);
 
   // Derived
   const exp = profile?.exp ?? 0;
@@ -261,9 +257,9 @@ export default function App() {
               showToast={showToast}
               addLog={addLog}
               spendSeed={spendSeed}
+              spendSeedOnBackend={spendSeedOnBackend}
               onHarvest={handleHarvest}
               harvestOffChain={harvestOffChain}
-              onAfterPlant={handleAfterPlant}
             />
             <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px", marginTop:"10px" }}>
               <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020", marginBottom:"8px" }}>ACTIVITY LOG</div>
