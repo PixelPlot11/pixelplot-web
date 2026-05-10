@@ -90,6 +90,11 @@ export default function App() {
     if (tab === "LEADERBOARD") loadLeaderboard();
   }, [tab]);
 
+  // ── Re-fetch inventory after plant (for rollback cases) ──
+  const handleAfterPlant = useCallback(async () => {
+    if (wallet) await loadInventory(wallet);
+  }, [wallet, loadInventory]);
+
   // ── Harvest callback ──
   // After harvest, refresh profile from Supabase to get accurate pending_earnings
   const handleHarvest = useCallback(async (cropKey, earned, expGain, pendingEarnings) => {
@@ -260,6 +265,7 @@ export default function App() {
               spendSeedOnBackend={spendSeedOnBackend}
               onHarvest={handleHarvest}
               harvestOffChain={harvestOffChain}
+              onAfterPlant={handleAfterPlant}
             />
             <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px", marginTop:"10px" }}>
               <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020", marginBottom:"8px" }}>ACTIVITY LOG</div>

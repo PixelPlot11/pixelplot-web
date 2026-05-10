@@ -73,7 +73,7 @@ function loadEnergy(walletAddress) {
 export default function Farm({
   wallet, profile, inventory,
   showToast, addLog, spendSeed, spendSeedOnBackend,
-  onHarvest, harvestOffChain,
+  onHarvest, harvestOffChain, onAfterPlant,
 }) {
   const walletAddr = wallet?.address?.toLowerCase() || "";
 
@@ -90,6 +90,7 @@ export default function Farm({
   });
 
   const [action, setAction]             = useState("plant");
+  const [planting, setPlanting]           = useState(false); // lock to prevent double-plant
   const [selectedCrop, setSelectedCrop] = useState("wheat");
   const [showPicker, setShowPicker]     = useState(false);
   const energyRef = useRef(energy);
@@ -165,12 +166,17 @@ export default function Farm({
     const p = grid[i];
 
     if (action === "plant") {
+      if (planting) return; // prevent rapid clicks
       if (p.crop) { showToast("⚠️ Plot occupied!"); return; }
       if ((inventory[selectedCrop] || 0) < 1) { showToast("🛒 No seeds! Buy from Market.", "#e04040"); return; }
       const c = CROPS[selectedCrop];
       if (c.unlockLevel > level) { showToast("🔒 Crop not unlocked!"); return; }
       if (!spendEnergy(c.eP)) { showToast(`⚡ Need ${c.eP} energy!`, "#e04040"); return; }
-      // Optimistic local update first
+
+      // Lock immediately to prevent double-plant
+      setPlanting(true);
+
+      // Optimistic: update UI instantly
       spendSeed(selectedCrop);
       setGrid(g => {
         const n = [...g];
@@ -178,8 +184,16 @@ export default function Farm({
         return n;
       });
       addLog(`🌱 Planted ${c.name} [−${c.eP}⚡]`);
-      // Sync to backend (decrement Supabase inventory)
-      spendSeedOnBackend(selectedCrop);
+
+      // Sync to backend then unlock
+      const ok = await spendSeedOnBackend(selectedCrop);
+      if (!ok) {
+        // Backend rejected (no seeds) — rollback
+        spendSeed(selectedCrop); // this won't work well, so reload
+        showToast("❌ Seed sync failed, refreshing...", "#e04040");
+        if (onAfterPlant) onAfterPlant(); // reload inventory
+      }
+      setPlanting(false);
     }
     else if (action === "water") {
       if (!p.crop || p.watered || p.ready) { showToast("⚠️ Can't water here!"); return; }
