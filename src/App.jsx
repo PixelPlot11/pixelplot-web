@@ -156,7 +156,7 @@ export default function App() {
           <div>
             <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE SEPOLIA</div>
             <div style={{ fontSize:"20px", fontWeight:900, color:"#f0c060", letterSpacing:"2px", textShadow:"0 0 16px #f0c06060", display:"flex", alignItems:"center", gap:"8px" }}>
-              <img src="/icons.png" alt="PixelPlot" style={{ height:"24px", width:"24px" }} />
+              <img src="/logo.png" alt="PixelPlot" style={{ height:"24px", width:"24px" }} />
               PIXELPLOT
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function App() {
         {!wallet && tab === "FARM" && (
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
             justifyContent:"center", padding:"60px 24px", textAlign:"center", gap:"16px" }}>
-            <div style={{ fontSize:"52px" }}>🌾</div>
+            <img src="/logo.png" alt="PixelPlot" style={{ height:"72px", width:"72px", objectFit:"contain" }} />
             <div style={{ fontSize:"18px", fontWeight:900, color:"#f0c060" }}>PIXELPLOT</div>
             <div style={{ fontSize:"11px", color:"#5a4020", lineHeight:2, maxWidth:"280px" }}>
               A Web3 farming game on Base. Buy seeds with $PLOT, grow crops,
