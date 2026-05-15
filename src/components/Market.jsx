@@ -1,10 +1,32 @@
 // src/components/Market.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CROPS, getLevelData, getSellBonus } from "../lib/gameData";
 import { CONFIG } from "../lib/config";
 
+const BACKEND = CONFIG.BACKEND_URL || "http://localhost:3001";
+
 export default function Market({ wallet, profile, inventory, buySeeds, buyingSeeds }) {
-  const [qty, setQty] = useState({});  // per-crop qty
+  const [qty, setQty]           = useState({});
+  const [livePrices, setLivePrices] = useState(null);
+  const [priceError, setPriceError] = useState(false);
+
+  // Fetch live prices from backend every time Market tab mounts
+  useEffect(() => {
+    setPriceError(false);
+    fetch(`${BACKEND}/api/prices`)
+      .then(r => r.json())
+      .then(d => setLivePrices(d.prices || null))
+      .catch(() => setPriceError(true));
+  }, []);
+
+  // Merge live prices with static CROPS metadata (emoji, color, growTime, etc.)
+  const crops = Object.fromEntries(
+    Object.entries(CROPS).map(([key, c]) => [key, {
+      ...c,
+      seedCost:  livePrices?.[key]?.seedCost  ?? c.seedCost,
+      sellPrice: livePrices?.[key]?.sellPrice ?? c.sellPrice,
+    }])
+  );
 
   const exp       = profile?.exp ?? 0;
   const { cur }   = getLevelData(exp);
@@ -26,10 +48,13 @@ export default function Market({ wallet, profile, inventory, buySeeds, buyingSee
         {!wallet && (
           <div style={{ fontSize:"10px", color:"#e04040", marginTop:"8px" }}>⚠️ Connect wallet to buy seeds</div>
         )}
+        {priceError && (
+          <div style={{ fontSize:"9px", color:"#f0c060", marginTop:"6px" }}>⚠️ Showing cached prices — backend unreachable</div>
+        )}
       </div>
 
       {/* Crop cards */}
-      {Object.entries(CROPS).map(([key, c]) => {
+      {Object.entries(crops).map(([key, c]) => {
         const locked   = c.unlockLevel > level;
         const inStock  = inventory[key] || 0;
         const q        = getQty(key);
