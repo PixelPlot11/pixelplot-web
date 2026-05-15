@@ -49,6 +49,8 @@ function Input({ label, value, onChange, placeholder, suffix }) {
 }
 
 export default function AdminPanel({ wallet }) {
+  const BACKEND = CONFIG.BACKEND_URL || "http://localhost:3001";
+
   const [isAdmin, setIsAdmin]       = useState(false);
   const [checking, setChecking]     = useState(true);
   const [stats, setStats]           = useState(null);
@@ -57,8 +59,13 @@ export default function AdminPanel({ wallet }) {
   const [msg, setMsg]               = useState(null);
   const [cropActive, setCropActive] = useState({});
 
+  // Crop price editor state
+  const [editCrop, setEditCrop] = useState("wheat");
+  const [newSeed, setNewSeed]   = useState("");
+  const [newSell, setNewSell]   = useState("");
+
   // Daily cap state
-  const [newCap, setNewCap]         = useState("");
+  const [newCap, setNewCap] = useState("");
 
   const showMsg = useCallback((text, color="#4caf50") => {
     setMsg({ text, color });
@@ -99,6 +106,46 @@ export default function AdminPanel({ wallet }) {
   }, [wallet]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
+
+  // Pre-fill inputs when crop selection changes
+  useEffect(() => {
+    const c = CROPS[editCrop];
+    if (c) { setNewSeed(c.seedCost.toString()); setNewSell(c.sellPrice.toString()); }
+  }, [editCrop]);
+
+  const updateCropPrices = async () => {
+    if (!wallet || !newSeed || !newSell) return;
+    const seedInt = parseInt(newSeed);
+    const sellInt = parseInt(newSell);
+    if (!seedInt || !sellInt || seedInt <= 0 || sellInt <= 0) {
+      showMsg("Enter valid prices", "#e04040"); return;
+    }
+    setTxPending(true);
+    try {
+      const timestamp = Date.now();
+      const message = `PixelPlot Admin Update\nCrop: ${editCrop}\nSeed Cost: ${seedInt}\nSell Price: ${sellInt}\nTimestamp: ${timestamp}`;
+      showMsg("⏳ Sign the message in your wallet…", "#f0c060");
+      const signature = await wallet.signer.signMessage(message);
+
+      const res = await fetch(`${BACKEND}/api/admin/update-price`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminAddress: wallet.address,
+          cropKey: editCrop,
+          seedCost: seedInt,
+          sellPrice: sellInt,
+          timestamp,
+          signature,
+        }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
+      showMsg(`✅ ${CROPS[editCrop].name} prices updated!`);
+    } catch (e) {
+      showMsg(e.message || "Failed", "#e04040");
+    }
+    setTxPending(false);
+  };
 
   const toggleCropActive = async (cropKey) => {
     if (!wallet) return;
@@ -232,6 +279,62 @@ export default function AdminPanel({ wallet }) {
         }}>↻ Refresh Stats</button>
       </Panel>
 
+      {/* Update Crop Prices */}
+      <Panel title="UPDATE CROP PRICES">
+        <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"10px", lineHeight:1.8 }}>
+          Changes take effect immediately for all new purchases (no on-chain tx needed).
+          Sign with your admin wallet to authenticate.
+        </div>
+
+        {/* Crop selector */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"4px", marginBottom:"12px" }}>
+          {Object.entries(CROPS).map(([key, c]) => (
+            <button key={key} onClick={()=>setEditCrop(key)} style={{
+              padding:"6px 4px", fontSize:"9px", textAlign:"center",
+              background:editCrop===key?"#2a1f0a":"transparent",
+              border:`1px solid ${editCrop===key?c.color:"#2a1e0a"}`,
+              borderRadius:"6px", cursor:"pointer", fontFamily:"inherit",
+              color:editCrop===key?c.color:"#5a4020",
+            }}>
+              {c.emoji}<br/><span style={{fontSize:"8px"}}>{c.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Profit preview */}
+        {newSeed && newSell && (() => {
+          const s = parseInt(newSeed) || 0;
+          const v = parseInt(newSell) || 0;
+          const p10k  = 10_000 / 100_000_000_000;
+          const p100k = 100_000 / 100_000_000_000;
+          return (
+            <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"8px", padding:"8px", background:"#0d0a06", borderRadius:"6px", lineHeight:1.8 }}>
+              <div>Profit preview per harvest:</div>
+              <div>Lv1  @ $10k: <span style={{color:(v-s)*p10k>=0?"#4caf50":"#e04040"}}>{((v-s)*p10k).toFixed(6)}$</span>
+                {"  "}Lv10: <span style={{color:"#4caf50"}}>+{(v*1.35-s)*p10k.toFixed(6)}$</span></div>
+              <div>Lv1  @ $100k: <span style={{color:(v-s)*p100k>=0?"#4caf50":"#e04040"}}>{((v-s)*p100k).toFixed(5)}$</span>
+                {"  "}Lv10: <span style={{color:"#4caf50"}}>+{((v*1.35-s)*p100k).toFixed(5)}$</span></div>
+            </div>
+          );
+        })()}
+
+        <Input label={`Seed Cost (current: ${CROPS[editCrop]?.seedCost?.toLocaleString()})`}
+          value={newSeed} onChange={setNewSeed} placeholder="e.g. 20000" suffix="$PLOT" />
+        <Input label={`Sell Price (current: ${CROPS[editCrop]?.sellPrice?.toLocaleString()})`}
+          value={newSell} onChange={setNewSell} placeholder="e.g. 22000" suffix="$PLOT" />
+
+        <button onClick={updateCropPrices} disabled={txPending || !newSeed || !newSell} style={{
+          width:"100%", padding:"11px", marginTop:"4px",
+          background: txPending?"#0d0a06":"#1a2d0a",
+          border:`1px solid ${txPending?"#2a1e0a":"#4caf50"}`,
+          borderRadius:"20px", color:txPending?"#3a2a10":"#4caf50",
+          cursor:txPending?"not-allowed":"pointer",
+          fontFamily:"inherit", fontSize:"11px", fontWeight:700,
+        }}>
+          {txPending ? "⏳ Waiting..." : `🔄 Update ${CROPS[editCrop]?.name} Prices`}
+        </button>
+      </Panel>
+
       {/* Crop Active Toggles */}
       <Panel title="CROP ACTIVE STATUS">
         <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"10px", lineHeight:1.8 }}>
@@ -317,8 +420,8 @@ export default function AdminPanel({ wallet }) {
       </Panel>
 
       <div style={{ fontSize:"8px", color:"#3a2a10", textAlign:"center", lineHeight:1.8, padding:"8px" }}>
-        ⚠️ All changes are permanent on-chain transactions.<br/>
-        Double check values before confirming in MetaMask.
+        ⚠️ Price changes are instant (off-chain). Crop toggles + daily cap are on-chain transactions.<br/>
+        Double check values before submitting.
       </div>
     </div>
   );
