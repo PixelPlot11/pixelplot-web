@@ -25,10 +25,9 @@ function Row({ label, value, color="#e8d5a3" }) {
 }
 
 export default function Docs({ tab: activeTab }) {
-  const [tab, setTab] = React.useState("howto");
+  const [tab, setTab] = React.useState("tokenomics");
 
   const tabs = [
-    { id:"howto",      label:"🎮 How to Use" },
     { id:"tokenomics", label:"📊 Tokenomics" },
     { id:"whitepaper", label:"📄 Whitepaper" },
     { id:"contracts",  label:"🔗 Contracts"  },
@@ -48,69 +47,6 @@ export default function Docs({ tab: activeTab }) {
           }}>{t.label}</button>
         ))}
       </div>
-
-      {/* HOW TO USE */}
-      {tab === "howto" && (
-        <div>
-          <Section title="GETTING STARTED">
-            {[
-              ["1️⃣  Connect Wallet", "Click Connect Wallet at the top. Use a Base-compatible wallet (e.g. MetaMask). Make sure you're on the Base network (or Base Sepolia for testnet)."],
-              ["2️⃣  Get $PLOT Tokens", "You need $PLOT to buy seeds. Swap ETH → $PLOT on Uniswap V4, or earn them by playing and withdrawing your in-game earnings."],
-              ["3️⃣  Buy Seeds", "Go to the Farm tab. Select an empty plot, pick a crop you want to plant, then approve the seed purchase with your wallet."],
-              ["4️⃣  Water Your Crops", "After planting, water each crop to speed up growth by 30%. Watering costs a small amount of energy."],
-              ["5️⃣  Harvest", "Once a crop is ready, click Harvest. Your $PLOT earnings accumulate off-chain instantly — no gas needed per harvest."],
-              ["6️⃣  Withdraw Earnings", "Go to the Withdraw section, enter the amount, and sign the transaction. Your accumulated $PLOT is sent to your wallet on-chain."],
-            ].map(([step, desc]) => (
-              <div key={step} style={{ padding:"10px 0", borderBottom:"1px solid #1a1206" }}>
-                <div style={{ fontSize:"10px", color:"#f0c060", fontWeight:700, marginBottom:"4px" }}>{step}</div>
-                <div style={{ fontSize:"9px", color:"#5a4020", lineHeight:1.9 }}>{desc}</div>
-              </div>
-            ))}
-          </Section>
-
-          <Section title="ENERGY SYSTEM">
-            <Row label="Max Energy"     value="1,000" color="#f0c060" />
-            <Row label="Regen Rate"     value="~1.4 / min  (full in 12h)" />
-            <Row label="Plant Cost"     value="10 energy / seed" />
-            <Row label="Water Cost"     value="5 energy / crop" />
-            <Row label="Harvest Cost"   value="0 energy (free)" />
-            <div style={{ fontSize:"9px", color:"#3a2a10", marginTop:"8px", lineHeight:1.8 }}>
-              Energy limits how fast you can farm. Plan your sessions — plant in bulk, then come back to water and harvest.
-            </div>
-          </Section>
-
-          <Section title="LEVEL PROGRESSION">
-            <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"8px", lineHeight:1.8 }}>
-              Harvest crops to earn EXP. Leveling up unlocks new crops, extra farm plots, and a sell bonus up to +35% at Lv10.
-              Low-level players farm at a loss by design — grinding levels is the game loop.
-            </div>
-            {[
-              ["Lv 1–3",  "Learn the basics. All crops run at a loss. Focus on earning EXP fast with cheap seeds."],
-              ["Lv 4–6",  "Mid-game crops unlock. Some crops start turning profit. Expand your plots."],
-              ["Lv 7–9",  "High-value crops become available. Sell bonus kicks in noticeably."],
-              ["Lv 10",   "+35% sell bonus. All crops profitable. Maximise yield with premium crops."],
-            ].map(([range, tip]) => (
-              <div key={range} style={{ padding:"7px 0", borderBottom:"1px solid #1a1206" }}>
-                <div style={{ fontSize:"10px", color:"#9c7adb", fontWeight:700, marginBottom:"3px" }}>{range}</div>
-                <div style={{ fontSize:"9px", color:"#5a4020", lineHeight:1.8 }}>{tip}</div>
-              </div>
-            ))}
-          </Section>
-
-          <Section title="TIPS & TRICKS">
-            {[
-              "🌽  Start with Corn — cheapest seed, good EXP for beginners.",
-              "💧  Always water before logging off to cut grow time by 30%.",
-              "⏱️  Harvest is gas-free — do it often to stack earnings off-chain.",
-              "💰  Only withdraw when you have a decent amount to save on gas fees.",
-              "📈  Check the crop table in Tokenomics to find the best profit per energy.",
-              "🔒  Withdraw limit is 10,000 $PLOT per transaction and 150,000 per day.",
-            ].map(tip => (
-              <div key={tip} style={{ fontSize:"9px", color:"#8a7050", padding:"6px 0", borderBottom:"1px solid #1a1206", lineHeight:1.8 }}>{tip}</div>
-            ))}
-          </Section>
-        </div>
-      )}
 
       {/* TOKENOMICS */}
       {tab === "tokenomics" && (
