@@ -9,6 +9,7 @@ import Market      from "./components/Market";
 import Profile     from "./components/Profile";
 import Leaderboard from "./components/Leaderboard";
 import Levels      from "./components/Levels";
+import Docs        from "./components/Docs";
 import { getLevelData, shortAddr } from "./lib/gameData";
 import WalletModal from "./components/WalletModal";
 
@@ -18,6 +19,7 @@ const TABS = [
   { id:"LEVELS",      icon:"⭐" },
   { id:"LEADERBOARD", icon:"🏆" },
   { id:"PROFILE",     icon:"👤" },
+  { id:"DOCS",        icon:"📖" },
 ];
 
 export default function App() {
@@ -298,6 +300,8 @@ export default function App() {
             withdrawEarnings={() => withdrawEarnings()} withdrawing={withdrawing}
           />
         )}
+
+        {tab === "DOCS" && <Docs />}
       </div>
 
       <style>{`
