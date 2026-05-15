@@ -157,7 +157,6 @@ export default function App() {
 
       {/* ── HEADER ── */}
       <div style={{ background:"#110e07", borderBottom:"1px solid #2a1e0a", padding:"10px 14px 8px" }}>
-      <div style={{ maxWidth:"640px", margin:"0 auto" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: wallet ? "10px" : "0" }}>
           <div>
             <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE SEPOLIA</div>
@@ -221,8 +220,6 @@ export default function App() {
             </div>
           </>
         )}
-      </div>
-
       </div>
       {/* ── TABS ── */}
       <div style={{ display:"flex", background:"#110e07", borderBottom:"1px solid #2a1e0a", overflowX:"auto" }}>
