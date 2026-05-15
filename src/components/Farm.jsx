@@ -243,7 +243,7 @@ export default function Farm({
   const selectedC = CROPS[selectedCrop];
 
   return (
-    <div className="farm-wrap" style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:"10px", maxWidth:"500px", margin:"0 auto", width:"100%" }}>
 
       {/* Seed picker modal */}
       {showPicker && (
@@ -339,7 +339,7 @@ export default function Farm({
             </span>
           )}
         </div>
-        <div className="farm-grid">
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"8px" }}>
           {grid.map((p, i) => {
             const d = getPlotDisplay(p, i);
             return (
