@@ -17,12 +17,14 @@ export const ERC20_ABI = [
 ];
 
 export const GAME_ABI = [
-  "function buySeed(uint8 cropId, uint256 amount) external",
-  "function addEarnings(address user, uint256 amount, uint256 nonce, bytes signature) external",
+  "function buySeed(uint8 cropId, uint256 quantity, uint256 amount, uint256 nonce, bytes calldata signature) external",
+  "function addEarnings(address user, uint256 amount, uint256 nonce, bytes calldata signature) external",
   "function withdraw(uint256 amount) external",
   "function getGameBalance(address user) view returns (uint256)",
   "function getSeedInventory(address user, uint8 cropId) view returns (uint256)",
   "function getAllSeeds(address user) view returns (uint256[8])",
   "function withdrawCooldownRemaining(address user) view returns (uint256)",
   "function nonces(address user) view returns (uint256)",
+  "function purchaseNonces(address user) view returns (uint256)",
+  "function cropActive(uint8 cropId) view returns (bool)",
 ];

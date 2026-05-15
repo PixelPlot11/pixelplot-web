@@ -8,7 +8,8 @@ import { CROPS } from "../lib/gameData";
 import { CONFIG } from "../lib/config";
 
 const ADMIN_ABI = [
-  "function updateCrop(uint8 cropId, uint256 seedCost, uint256 sellPrice, bool active) external",
+  "function setCropActive(uint8 cropId, bool active) external",
+  "function cropActive(uint8) view returns (bool)",
   "function updateDailyWithdrawCap(uint256 newCap) external",
   "function dailyWithdrawCap() view returns (uint256)",
   "function dailyWithdrawnAmount() view returns (uint256)",
@@ -54,11 +55,7 @@ export default function AdminPanel({ wallet }) {
   const [isPaused, setIsPaused]     = useState(false);
   const [txPending, setTxPending]   = useState(false);
   const [msg, setMsg]               = useState(null);
-
-  // Crop editor state
-  const [editCrop, setEditCrop]     = useState("wheat");
-  const [newSeed, setNewSeed]       = useState("");
-  const [newSell, setNewSell]       = useState("");
+  const [cropActive, setCropActive] = useState({});
 
   // Daily cap state
   const [newCap, setNewCap]         = useState("");
@@ -85,8 +82,15 @@ export default function AdminPanel({ wallet }) {
         cap:       ethers.formatEther(cap),
         withdrawn: ethers.formatEther(withdrawn),
         balance:   ethers.formatEther(balance),
-        capRaw:    cap,
       });
+      // Load crop active status
+      const cropKeys = Object.keys(CROPS);
+      const activeResults = await Promise.all(
+        cropKeys.map((_, i) => game.cropActive(i))
+      );
+      const activeMap = {};
+      cropKeys.forEach((k, i) => { activeMap[k] = activeResults[i]; });
+      setCropActive(activeMap);
     } catch (e) {
       console.error("loadStats:", e);
     } finally {
@@ -96,28 +100,18 @@ export default function AdminPanel({ wallet }) {
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
-  // Pre-fill crop values when selection changes
-  useEffect(() => {
-    const c = CROPS[editCrop];
-    if (c) {
-      setNewSeed(c.seedCost.toString());
-      setNewSell(c.sellPrice.toString());
-    }
-  }, [editCrop]);
-
-  const updateCrop = async () => {
-    if (!wallet || !newSeed || !newSell) return;
-    const c = CROPS[editCrop];
+  const toggleCropActive = async (cropKey) => {
+    if (!wallet) return;
+    const c       = CROPS[cropKey];
+    const current = cropActive[cropKey];
     setTxPending(true);
     try {
-      const game     = new ethers.Contract(CONFIG.GAME_CONTRACT_ADDRESS, ADMIN_ABI, wallet.signer);
-      const seedWei  = ethers.parseEther(newSeed);
-      const sellWei  = ethers.parseEther(newSell);
-      const tx = await game.updateCrop(c.id, seedWei, sellWei, true);
+      const game = new ethers.Contract(CONFIG.GAME_CONTRACT_ADDRESS, ADMIN_ABI, wallet.signer);
+      const tx   = await game.setCropActive(c.id, !current);
       showMsg("⏳ Waiting for confirmation...", "#f0c060");
       await tx.wait();
-      showMsg(`✅ ${c.name} prices updated on-chain!`);
-      await loadStats();
+      setCropActive(prev => ({ ...prev, [cropKey]: !current }));
+      showMsg(`✅ ${c.name} is now ${!current ? "active" : "inactive"}!`);
     } catch (e) {
       showMsg(e.reason || "Transaction failed", "#e04040");
     }
@@ -181,8 +175,6 @@ export default function AdminPanel({ wallet }) {
     </Panel>
   );
 
-  const selectedCrop = CROPS[editCrop];
-
   return (
     <div>
       {/* Toast */}
@@ -240,77 +232,41 @@ export default function AdminPanel({ wallet }) {
         }}>↻ Refresh Stats</button>
       </Panel>
 
-      {/* Update Crop Prices */}
-      <Panel title="UPDATE CROP PRICES">
+      {/* Crop Active Toggles */}
+      <Panel title="CROP ACTIVE STATUS">
         <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"10px", lineHeight:1.8 }}>
-          Update seed buy/sell prices on-chain. Use when MCap changes significantly.
-          Values in token units (not wei) — e.g. enter 20000 for 20,000 tokens.
+          Toggle crops on/off. Inactive crops cannot be purchased.
+          Prices are managed off-chain by the backend.
         </div>
-
-        {/* Crop selector */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"4px", marginBottom:"12px" }}>
-          {Object.entries(CROPS).map(([key, c]) => (
-            <button key={key} onClick={()=>setEditCrop(key)} style={{
-              padding:"6px 4px", fontSize:"9px", textAlign:"center",
-              background:editCrop===key?"#2a1f0a":"transparent",
-              border:`1px solid ${editCrop===key?c.color:"#2a1e0a"}`,
-              borderRadius:"6px", cursor:"pointer", fontFamily:"inherit",
-              color:editCrop===key?c.color:"#5a4020",
-            }}>
-              {c.emoji}<br/>
-              <span style={{fontSize:"8px"}}>{c.name}</span>
-            </button>
-          ))}
-        </div>
-
-        {selectedCrop && (
-          <div style={{ background:"#0d0a06", borderRadius:"8px", padding:"12px", marginBottom:"10px" }}>
-            <div style={{ fontSize:"10px", color:selectedCrop.color, fontWeight:700, marginBottom:"8px" }}>
-              {selectedCrop.emoji} {selectedCrop.name} — Current: {selectedCrop.seedCost.toLocaleString()} / {selectedCrop.sellPrice.toLocaleString()}
-            </div>
-
-            {/* Price preview */}
-            {newSeed && newSell && (
-              <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"8px", padding:"8px", background:"#110e07", borderRadius:"6px" }}>
-                {(() => {
-                  const price10k  = 10_000 / 100_000_000_000;
-                  const price100k = 100_000 / 100_000_000_000;
-                  const s = parseInt(newSeed) || 0;
-                  const v = parseInt(newSell) || 0;
-                  const lv1_10k   = (v - s) * price10k;
-                  const lv10_10k  = (v * 1.35 - s) * price10k;
-                  const lv1_100k  = (v - s) * price100k;
-                  const lv10_100k = (v * 1.35 - s) * price100k;
-                  return (
-                    <>
-                      <div>Preview profit per harvest:</div>
-                      <div>  Lv1  @ $10k MCap: <span style={{color:lv1_10k>=0?"#4caf50":"#e04040"}}>{lv1_10k>=0?"+":""}{lv1_10k.toFixed(6)}$</span></div>
-                      <div>  Lv10 @ $10k MCap: <span style={{color:"#4caf50"}}>+{lv10_10k.toFixed(6)}$</span></div>
-                      <div>  Lv1  @ $100k MCap: <span style={{color:lv1_100k>=0?"#4caf50":"#e04040"}}>{lv1_100k>=0?"+":""}{lv1_100k.toFixed(5)}$</span></div>
-                      <div>  Lv10 @ $100k MCap: <span style={{color:"#4caf50"}}>+{lv10_100k.toFixed(5)}$</span></div>
-                    </>
-                  );
-                })()}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px" }}>
+          {Object.entries(CROPS).map(([key, c]) => {
+            const active = cropActive[key];
+            return (
+              <div key={key} style={{
+                display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"8px 10px", background:"#0d0a06", borderRadius:"8px",
+                border:`1px solid ${active?"#2a3a1a":"#3a1a1a"}`,
+              }}>
+                <div>
+                  <div style={{ fontSize:"10px", color:active?c.color:"#5a4020" }}>{c.emoji} {c.name}</div>
+                  <div style={{ fontSize:"8px", color:"#3a2a10", marginTop:"2px" }}>{c.seedCost?.toLocaleString()} $PLOT</div>
+                </div>
+                <button onClick={()=>toggleCropActive(key)} disabled={txPending} style={{
+                  padding:"4px 10px", fontSize:"9px",
+                  background: active?"#1a3d1a":"#3d1a1a",
+                  border:`1px solid ${active?"#4caf50":"#e04040"}`,
+                  borderRadius:"20px",
+                  color: active?"#4caf50":"#e04040",
+                  cursor:txPending?"not-allowed":"pointer",
+                  fontFamily:"inherit",
+                  opacity:txPending?0.5:1,
+                }}>
+                  {active?"ON":"OFF"}
+                </button>
               </div>
-            )}
-
-            <Input label="New Seed Cost (tokens)" value={newSeed}
-              onChange={setNewSeed} placeholder="e.g. 20000" suffix="tokens" />
-            <Input label="New Sell Price (tokens)" value={newSell}
-              onChange={setNewSell} placeholder="e.g. 22000" suffix="tokens" />
-          </div>
-        )}
-
-        <button onClick={updateCrop} disabled={txPending || !newSeed || !newSell} style={{
-          width:"100%", padding:"11px",
-          background: txPending?"#0d0a06":"#1a2d0a",
-          border:`1px solid ${txPending?"#2a1e0a":"#4caf50"}`,
-          borderRadius:"20px", color:txPending?"#3a2a10":"#4caf50",
-          cursor:txPending?"not-allowed":"pointer",
-          fontFamily:"inherit", fontSize:"11px", fontWeight:700,
-        }}>
-          {txPending ? "⏳ Waiting..." : `🔄 Update ${selectedCrop?.name} Prices On-Chain`}
-        </button>
+            );
+          })}
+        </div>
       </Panel>
 
       {/* Update Daily Cap */}

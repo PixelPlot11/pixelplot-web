@@ -219,15 +219,15 @@ export default function Docs({ tab: activeTab }) {
             {[
               {
                 name: "$PLOT Token (PLOTToken.sol)",
-                addr: "0x753860887cC1c7B95581855243378088B30dEc0b",
-                url:  "https://sepolia.basescan.org/address/0x753860887cC1c7B95581855243378088B30dEc0b#code",
+                addr: "0x39D39db16082C448F074f08F89fc1f21602170c5",
+                url:  "https://sepolia.basescan.org/address/0x39D39db16082C448F074f08F89fc1f21602170c5#code",
                 desc: "ERC-20 token. Fixed 21M supply. No mint after deploy.",
               },
               {
                 name: "Game Contract (PixelPlotGame.sol)",
-                addr: "0xeb80b98eDA63Ba59cC8AA9868Fb245f65809BDC3",
-                url:  "https://sepolia.basescan.org/address/0xeb80b98eDA63Ba59cC8AA9868Fb245f65809BDC3#code",
-                desc: "Handles seed purchase, earnings, and withdrawal. ECDSA verified.",
+                addr: "0xcD5295923BBFdDfe597230E421D9d3D9Bacf217b",
+                url:  "https://sepolia.basescan.org/address/0xcD5295923BBFdDfe597230E421D9d3D9Bacf217b#code",
+                desc: "Handles seed purchase (operator-signed), earnings, and withdrawal. ECDSA verified.",
               },
             ].map(c=>(
               <div key={c.addr} style={{ padding:"12px", background:"#0d0a06", borderRadius:"8px", border:"1px solid #2a1e0a", marginBottom:"8px" }}>

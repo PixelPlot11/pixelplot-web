@@ -32,28 +32,42 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
     }
   }, [wallet, BACKEND]);
 
-  // ── Buy seeds — on-chain + sync backend inventory ──
+  // ── Buy seeds — backend signs price, then on-chain purchase ──
   const buySeeds = useCallback(async (cropKey, qty) => {
     if (!wallet) { showToast("Connect wallet first!", "#e04040"); return; }
-    const c         = CROPS[cropKey];
-    const totalCost = BigInt(c.seedCost * qty) * 10n ** 18n;
+    const c = CROPS[cropKey];
     setBuying(cropKey);
     try {
+      // 1. Get operator signature from backend
+      showToast("⏳ Preparing purchase…", "#f0c060");
+      const signRes = await fetch(`${BACKEND}/api/sign-purchase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: wallet.address, cropKey, qty }),
+      });
+      if (!signRes.ok) {
+        const err = await signRes.json();
+        throw new Error(err.error || "Signing failed");
+      }
+      const { totalWei, nonce, signature } = await signRes.json();
+
       const token = new ethers.Contract(CONFIG.PLOT_TOKEN_ADDRESS, ERC20_ABI, wallet.signer);
       const game  = new ethers.Contract(CONFIG.GAME_CONTRACT_ADDRESS, GAME_ABI, wallet.signer);
 
+      // 2. Approve exact amount signed by backend
       const allowance = await token.allowance(wallet.address, CONFIG.GAME_CONTRACT_ADDRESS);
-      if (allowance < totalCost) {
+      if (BigInt(allowance) < BigInt(totalWei)) {
         showToast("⏳ Approving $PLOT…", "#f0c060");
-        const tx = await token.approve(CONFIG.GAME_CONTRACT_ADDRESS, totalCost);
-        await tx.wait();
+        const approveTx = await token.approve(CONFIG.GAME_CONTRACT_ADDRESS, BigInt(totalWei));
+        await approveTx.wait();
       }
 
+      // 3. Submit on-chain with signature
       showToast("⏳ Buying seeds…", "#f0c060");
-      const tx = await game.buySeed(c.id, qty);
+      const tx = await game.buySeed(c.id, qty, BigInt(totalWei), BigInt(nonce), signature);
       await tx.wait();
 
-      // Sync to backend inventory
+      // 4. Sync to backend inventory
       await fetch(`${BACKEND}/api/add-seeds`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,12 +76,10 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
 
       showToast(`✅ Bought ${qty}× ${c.name}!`, "#4caf50");
       addLog(`🛒 Bought ${qty}× ${c.name} [−${c.seedCost * qty} $PLOT]`);
-
-      // Refresh inventory from backend
       await loadInventory();
       await refreshBalances();
     } catch (e) {
-      showToast(e.reason || "Transaction failed", "#e04040");
+      showToast(e.reason || e.message || "Transaction failed", "#e04040");
       console.error("buySeeds:", e);
     }
     setBuying(null);
