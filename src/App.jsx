@@ -236,7 +236,6 @@ export default function App() {
 
       {/* ── CONTENT ── */}
       <div style={{ flex:1, overflowY:"auto", padding:"12px", paddingBottom:tab==="FARM"?"80px":"12px" }}>
-      <div style={{ maxWidth:"640px", margin:"0 auto" }}>
 
         {/* Landing */}
         {!wallet && tab === "FARM" && (
@@ -306,8 +305,6 @@ export default function App() {
             withdrawEarnings={() => withdrawEarnings()} withdrawing={withdrawing}
           />
         )}
-      </div>
-
       </div>
 
       <Footer />
