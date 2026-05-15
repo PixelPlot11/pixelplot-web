@@ -156,7 +156,7 @@ export default function App() {
           <div>
             <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE SEPOLIA</div>
             <div style={{ fontSize:"20px", fontWeight:900, color:"#f0c060", letterSpacing:"2px", textShadow:"0 0 16px #f0c06060", display:"flex", alignItems:"center", gap:"8px" }}>
-              <img src="/icons.svg" alt="PixelPlot" style={{ height:"24px", width:"24px" }} />
+              <img src="/icons.png" alt="PixelPlot" style={{ height:"24px", width:"24px" }} />
               PIXELPLOT
             </div>
           </div>
