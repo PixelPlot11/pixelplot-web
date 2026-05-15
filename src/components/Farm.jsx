@@ -243,7 +243,7 @@ export default function Farm({
   const selectedC = CROPS[selectedCrop];
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:"10px", maxWidth:"500px", margin:"0 auto", width:"100%" }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
 
       {/* Seed picker modal */}
       {showPicker && (
@@ -339,7 +339,13 @@ export default function Farm({
             </span>
           )}
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"8px" }}>
+        <div style={{
+              display:"grid",
+              gridTemplateColumns:"repeat(4,1fr)",
+              gap:"8px",
+              maxWidth:"480px",   // cap plot size on PC
+              margin:"0 auto",
+            }}>
           {grid.map((p, i) => {
             const d = getPlotDisplay(p, i);
             return (
@@ -381,8 +387,10 @@ export default function Farm({
       <div style={{
         position:"fixed", bottom:0, left:0, right:0,
         background:"#110e07", borderTop:"1px solid #2a1e0a",
-        padding:"10px 12px", display:"flex", gap:"8px", zIndex:40,
+        padding:"10px 12px", zIndex:40,
+        display:"flex", justifyContent:"center",
       }}>
+      <div style={{ display:"flex", gap:"8px", width:"100%", maxWidth:"480px" }}>
         {ACTIONS.map(a => (
           <button key={a.id}
             onClick={() => { setAction(a.id); if (a.id==="plant") setShowPicker(true); }}
@@ -401,6 +409,7 @@ export default function Farm({
             {a.label}
           </button>
         ))}
+      </div>
       </div>
     </div>
   );

@@ -5,11 +5,13 @@ import { useWallet }    from "./hooks/useWallet";
 import { useSupabase }  from "./hooks/useSupabase";
 import { useContracts } from "./hooks/useContracts";
 import Farm        from "./components/Farm";
+import Footer      from "./components/Footer";
+import Docs        from "./components/Docs";
+import AdminPanel  from "./components/AdminPanel";
 import Market      from "./components/Market";
 import Profile     from "./components/Profile";
 import Leaderboard from "./components/Leaderboard";
 import Levels      from "./components/Levels";
-import Docs        from "./components/Docs";
 import { getLevelData, shortAddr } from "./lib/gameData";
 import WalletModal from "./components/WalletModal";
 
@@ -19,7 +21,8 @@ const TABS = [
   { id:"LEVELS",      icon:"⭐" },
   { id:"LEADERBOARD", icon:"🏆" },
   { id:"PROFILE",     icon:"👤" },
-  { id:"DOCS",        icon:"📖" },
+  { id:"DOCS",        icon:"📋" },
+  { id:"ADMIN",       icon:"⚙️" },
 ];
 
 export default function App() {
@@ -154,12 +157,12 @@ export default function App() {
 
       {/* ── HEADER ── */}
       <div style={{ background:"#110e07", borderBottom:"1px solid #2a1e0a", padding:"10px 14px 8px" }}>
+      <div style={{ maxWidth:"640px", margin:"0 auto" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: wallet ? "10px" : "0" }}>
           <div>
             <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE SEPOLIA</div>
-            <div style={{ fontSize:"20px", fontWeight:900, color:"#f0c060", letterSpacing:"2px", textShadow:"0 0 16px #f0c06060", display:"flex", alignItems:"center", gap:"8px" }}>
-              <img src="/logo.png" alt="PixelPlot" style={{ height:"24px", width:"24px" }} />
-              PIXELPLOT
+            <div style={{ fontSize:"20px", fontWeight:900, color:"#f0c060", letterSpacing:"2px", textShadow:"0 0 16px #f0c06060" }}>
+              🌾 PIXELPLOT
             </div>
           </div>
 
@@ -220,6 +223,7 @@ export default function App() {
         )}
       </div>
 
+      </div>
       {/* ── TABS ── */}
       <div style={{ display:"flex", background:"#110e07", borderBottom:"1px solid #2a1e0a", overflowX:"auto" }}>
         {TABS.map(t => (
@@ -235,12 +239,13 @@ export default function App() {
 
       {/* ── CONTENT ── */}
       <div style={{ flex:1, overflowY:"auto", padding:"12px", paddingBottom:tab==="FARM"?"80px":"12px" }}>
+      <div style={{ maxWidth:"640px", margin:"0 auto" }}>
 
         {/* Landing */}
         {!wallet && tab === "FARM" && (
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
             justifyContent:"center", padding:"60px 24px", textAlign:"center", gap:"16px" }}>
-            <img src="/logo.png" alt="PixelPlot" style={{ height:"72px", width:"72px", objectFit:"contain" }} />
+            <div style={{ fontSize:"52px" }}>🌾</div>
             <div style={{ fontSize:"18px", fontWeight:900, color:"#f0c060" }}>PIXELPLOT</div>
             <div style={{ fontSize:"11px", color:"#5a4020", lineHeight:2, maxWidth:"280px" }}>
               A Web3 farming game on Base. Buy seeds with $PLOT, grow crops,
@@ -292,6 +297,10 @@ export default function App() {
             lbLoading={lbLoading} loadLeaderboard={loadLeaderboard} />
         )}
 
+        {tab === "DOCS" && <Docs />}
+
+        {tab === "ADMIN" && <AdminPanel wallet={wallet} />}
+
         {tab === "PROFILE" && (
           <Profile
             wallet={wallet} profile={profile} inventory={inventory}
@@ -300,9 +309,11 @@ export default function App() {
             withdrawEarnings={() => withdrawEarnings()} withdrawing={withdrawing}
           />
         )}
-
-        {tab === "DOCS" && <Docs />}
       </div>
+
+      </div>
+
+      <Footer />
 
       <style>{`
         @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:0.3} }
