@@ -26,7 +26,7 @@ export const LEVELS = [
 
 export const MAX_ENERGY    = 1000;
 export const REGEN_PER_SEC = MAX_ENERGY / (12 * 60 * 60);
-export const GRID_SIZE     = 12;
+export const GRID_SIZE     = 20; // up to 12 base plots (Lv9) + 8 extra purchased plots
 export const PRESET_AVATARS = ["🧑‍🌾","👨‍🌾","👩‍🌾","🧙","🧝","🧚","🐲","🦊","🐺","🌻","🍄","⚡"];
 
 export function getLevelData(exp) {

@@ -29,7 +29,7 @@ function loadGrid(walletAddress) {
     const now   = Date.now();
 
     // Re-calculate progress based on elapsed time since save
-    return saved.map(p => {
+    const result = saved.map(p => {
       if (!p.crop) return mkPlot();
       if (p.ready) return { ...p, savedAt: null };
 
@@ -43,6 +43,10 @@ function loadGrid(walletAddress) {
 
       return { crop:p.crop, progress:newProgress, ready, watered:p.watered || false, savedAt:null };
     });
+
+    // Pad to current GRID_SIZE if saved grid is from an older version
+    while (result.length < GRID_SIZE) result.push(mkPlot());
+    return result;
   } catch {
     return null;
   }
@@ -73,7 +77,7 @@ function loadEnergy(walletAddress) {
 export default function Farm({
   wallet, profile, inventory,
   showToast, addLog, spendSeed, spendSeedOnBackend,
-  onHarvest, harvestOffChain, onAfterPlant,
+  onHarvest, harvestOffChain, onAfterPlant, onUseEnergy,
 }) {
   const walletAddr = wallet?.address?.toLowerCase() || "";
 
@@ -127,7 +131,7 @@ export default function Farm({
   const exp         = profile?.exp ?? 0;
   const { cur: lv } = getLevelData(exp);
   const level       = lv.level;
-  const activePlots = lv.plots;
+  const activePlots = Math.min(lv.plots + (profile?.extra_plots || 0), GRID_SIZE);
   const sellBonus   = getSellBonus(level);
   const readyCount  = grid.slice(0, activePlots).filter(p => p.ready).length;
   const energyPct   = (energy / MAX_ENERGY) * 100;
@@ -159,6 +163,16 @@ export default function Farm({
     setEnergy(e => e - amt);
     return true;
   }, []);
+
+  const handleUseEnergy = useCallback(async () => {
+    if (!onUseEnergy) return;
+    const ok = await onUseEnergy();
+    if (ok) {
+      setEnergy(e => Math.min(MAX_ENERGY, e + 200));
+      addLog("⚡ Used Energy Pack! +200 energy");
+      showToast("+200 ⚡ Energy restored!", "#f0c060");
+    }
+  }, [onUseEnergy, addLog, showToast]);
 
   const handlePlot = async (i) => {
     if (!wallet) { showToast("Connect wallet to play!", "#e04040"); return; }
@@ -301,6 +315,24 @@ export default function Farm({
             </span>
           )}
         </div>
+        {(profile?.energy_items || 0) > 0 && (
+          <div style={{
+            borderTop:"1px solid #1a1206", marginTop:"8px", paddingTop:"8px",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+          }}>
+            <span style={{ fontSize:"9px", color:"#f0c060" }}>
+              ⚡ Energy Pack ×{profile.energy_items}
+            </span>
+            <button onClick={handleUseEnergy} style={{
+              padding:"4px 14px", fontSize:"9px", fontWeight:700,
+              background:"#1a1a06", border:"1px solid #f0c060",
+              borderRadius:"20px", color:"#f0c060",
+              cursor:"pointer", fontFamily:"inherit",
+            }}>
+              +200 ⚡ Use
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Selected seed info */}
@@ -332,7 +364,7 @@ export default function Farm({
       <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px" }}>
         <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020", marginBottom:"10px",
           display:"flex", justifyContent:"space-between" }}>
-          <span>YOUR FARM — {activePlots} PLOTS · LV.{level}</span>
+          <span>YOUR FARM — {activePlots} PLOTS · LV.{level}{(profile?.extra_plots||0)>0?` +${profile.extra_plots} EXTRA`:""}</span>
           {getSellBonus(level) > 1 && (
             <span style={{color:"#4caf50"}}>
               +{Math.round((getSellBonus(level)-1)*100)}% sell bonus

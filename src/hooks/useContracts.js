@@ -1,13 +1,20 @@
 // src/hooks/useContracts.js
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { ethers } from "ethers";
 import { CONFIG, ERC20_ABI, GAME_ABI } from "../lib/config";
 import { CROPS } from "../lib/gameData";
+
+const USDC_ABI = [
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function balanceOf(address) view returns (uint256)",
+];
 
 export function useContracts(wallet, showToast, addLog, refreshBalances) {
   const [inventory, setInventory]     = useState({});
   const [buyingSeeds, setBuying]      = useState(null);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [buyingItem, setBuyingItem]   = useState(null);
+  const treasuryRef = useRef(null);
 
   const BACKEND = CONFIG.BACKEND_URL || "http://localhost:3001";
 
@@ -185,9 +192,84 @@ export function useContracts(wallet, showToast, addLog, refreshBalances) {
     }));
   }, []);
 
+  // ── Fetch treasury address (cached) ──────────────
+  const getTreasury = useCallback(async () => {
+    if (treasuryRef.current) return treasuryRef.current;
+    const res = await fetch(`${BACKEND}/api/treasury`);
+    const { treasury } = await res.json();
+    treasuryRef.current = treasury;
+    return treasury;
+  }, [BACKEND]);
+
+  // ── Buy USDC item (plot or energy) ───────────────
+  const buyItem = useCallback(async (itemType) => {
+    if (!wallet) { showToast("Connect wallet first!", "#e04040"); return false; }
+    setBuyingItem(itemType);
+    try {
+      const treasury = await getTreasury();
+      const amount   = itemType === "plot" ? 1_000_000n : 1_500_000n;
+      const label    = itemType === "plot" ? "Extra Plot" : "Energy Pack";
+
+      const usdc    = new ethers.Contract(CONFIG.USDC_ADDRESS, USDC_ABI, wallet.signer);
+      const balance = await usdc.balanceOf(wallet.address);
+      if (BigInt(balance) < amount) {
+        showToast("Insufficient USDC balance!", "#e04040");
+        return false;
+      }
+
+      showToast(`⏳ Sending USDC for ${label}…`, "#4a90d9");
+      const tx = await usdc.transfer(treasury, amount);
+      showToast("⏳ Confirming transaction…", "#4a90d9");
+      await tx.wait();
+
+      showToast("⏳ Verifying payment…", "#4a90d9");
+      const res = await fetch(`${BACKEND}/api/buy-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: wallet.address, txHash: tx.hash, itemType }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Verification failed");
+      }
+      const data = await res.json();
+      showToast(`✅ ${label} purchased!`, "#4caf50");
+      addLog(`🛒 Bought ${label} [USDC]`);
+      return data;
+    } catch (e) {
+      showToast(e.reason || e.message || "Purchase failed", "#e04040");
+      console.error("buyItem:", e);
+      return false;
+    } finally {
+      setBuyingItem(null);
+    }
+  }, [wallet, BACKEND, getTreasury, showToast, addLog]);
+
+  // ── Use energy item — decrements on backend ──────
+  const useEnergyItem = useCallback(async () => {
+    if (!wallet) return false;
+    try {
+      const res = await fetch(`${BACKEND}/api/use-energy-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: wallet.address }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || "Failed to use energy", "#e04040");
+        return false;
+      }
+      return true;
+    } catch (e) {
+      showToast("Failed to use energy", "#e04040");
+      return false;
+    }
+  }, [wallet, BACKEND, showToast]);
+
   return {
-    inventory, buyingSeeds, withdrawing,
+    inventory, buyingSeeds, withdrawing, buyingItem,
     loadInventory, buySeeds, harvestOffChain,
     withdrawEarnings, spendSeed, spendSeedOnBackend,
+    buyItem, useEnergyItem,
   };
 }

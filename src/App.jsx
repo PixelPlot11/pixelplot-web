@@ -54,9 +54,10 @@ export default function App() {
   } = useSupabase();
 
   const {
-    inventory, buyingSeeds, withdrawing,
+    inventory, buyingSeeds, withdrawing, buyingItem,
     loadInventory, buySeeds, harvestOffChain,
     withdrawEarnings, spendSeed, spendSeedOnBackend,
+    buyItem, useEnergyItem,
   } = useContracts(wallet, showToast, addLog, refreshBalances);
 
   // ── Connect wallet ──
@@ -99,6 +100,30 @@ export default function App() {
   const handleAfterPlant = useCallback(async () => {
     if (wallet) await loadInventory(wallet);
   }, [wallet, loadInventory]);
+
+  // ── Buy USDC item (plot or energy) ──
+  const handleBuyItem = useCallback(async (itemType) => {
+    const result = await buyItem(itemType);
+    if (result && result.success) {
+      if (itemType === "plot") {
+        updateProfileLocal({ extra_plots: result.extraPlots });
+      } else {
+        updateProfileLocal({ energy_items: result.energyItems });
+      }
+      if (wallet) refreshProfile(wallet.address);
+    }
+    return result;
+  }, [buyItem, wallet, updateProfileLocal, refreshProfile]);
+
+  // ── Use energy item (called from Farm, returns bool) ──
+  const handleUseEnergy = useCallback(async () => {
+    const ok = await useEnergyItem();
+    if (ok) {
+      updateProfileLocal({ energy_items: Math.max(0, (profile?.energy_items || 0) - 1) });
+      if (wallet) refreshProfile(wallet.address);
+    }
+    return ok;
+  }, [useEnergyItem, wallet, profile, updateProfileLocal, refreshProfile]);
 
   // ── Harvest callback ──
   // After harvest, refresh profile from Supabase to get accurate pending_earnings
@@ -270,6 +295,7 @@ export default function App() {
               onHarvest={handleHarvest}
               harvestOffChain={harvestOffChain}
               onAfterPlant={handleAfterPlant}
+              onUseEnergy={handleUseEnergy}
             />
             <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px", marginTop:"10px" }}>
               <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020", marginBottom:"8px" }}>ACTIVITY LOG</div>
@@ -283,7 +309,8 @@ export default function App() {
 
         {tab === "MARKET" && (
           <Market wallet={wallet} profile={profile} inventory={inventory}
-            buySeeds={buySeeds} buyingSeeds={buyingSeeds} />
+            buySeeds={buySeeds} buyingSeeds={buyingSeeds}
+            buyItem={handleBuyItem} buyingItem={buyingItem} />
         )}
 
         {tab === "LEVELS" && <Levels profile={profile} />}

@@ -5,7 +5,7 @@ import { CONFIG } from "../lib/config";
 
 const BACKEND = CONFIG.BACKEND_URL || "http://localhost:3001";
 
-export default function Market({ wallet, profile, inventory, buySeeds, buyingSeeds }) {
+export default function Market({ wallet, profile, inventory, buySeeds, buyingSeeds, buyItem, buyingItem }) {
   const [qty, setQty]           = useState({});
   const [livePrices, setLivePrices] = useState(null);
   const [priceError, setPriceError] = useState(false);
@@ -36,8 +36,132 @@ export default function Market({ wallet, profile, inventory, buySeeds, buyingSee
   const getQty = (key) => qty[key] || 1;
   const setQ   = (key, val) => setQty(prev => ({ ...prev, [key]: Math.max(1, Math.min(100, val)) }));
 
+  const extraPlots  = profile?.extra_plots  || 0;
+  const energyItems = profile?.energy_items || 0;
+  const isMaxPlots  = extraPlots >= 8;
+  const anyBuying   = !!buyingItem || !!buyingSeeds;
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+
+      {/* ── USDC ITEMS header ── */}
+      <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#4a90d9" }}>
+        PREMIUM ITEMS — USDC
+      </div>
+
+      {/* Extra Plot card */}
+      <div style={{
+        background:"#110e07",
+        border:`1px solid ${isMaxPlots ? "#1a1206" : "#1a2a3d"}`,
+        borderRadius:"10px", padding:"14px",
+        opacity: isMaxPlots ? 0.5 : 1,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom: wallet ? "12px" : "0" }}>
+          <div style={{ fontSize:"34px", flexShrink:0 }}>🏡</div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ fontSize:"13px", color:"#4a90d9", fontWeight:700 }}>Extra Plot</div>
+              <div style={{
+                fontSize:"9px", color:"#4a90d9",
+                background:"#0a1020", border:"1px solid #1a2a3d",
+                padding:"2px 8px", borderRadius:"20px",
+              }}>
+                {extraPlots} / 8 owned
+              </div>
+            </div>
+            <div style={{ fontSize:"9px", color:"#5a4020", marginTop:"5px", lineHeight:1.8 }}>
+              Unlock an extra farming plot permanently · Max 8 per wallet
+            </div>
+            <div style={{ fontSize:"11px", color:"#4a90d9", marginTop:"4px", fontWeight:700 }}>$1.00 USDC</div>
+          </div>
+        </div>
+
+        {wallet && (
+          <div style={{
+            background:"#0d0a06", borderRadius:"8px", padding:"10px 12px",
+            border:"1px solid #1a1e2d", display:"flex", justifyContent:"flex-end",
+          }}>
+            <button
+              onClick={() => buyItem("plot")}
+              disabled={anyBuying || isMaxPlots}
+              style={{
+                padding:"8px 20px",
+                background: isMaxPlots ? "transparent" : buyingItem === "plot" ? "#0d0a06" : "#0a1a2d",
+                border:`1px solid ${isMaxPlots ? "#2a1e0a" : buyingItem === "plot" ? "#1a2a3d" : "#4a90d9"}`,
+                borderRadius:"20px",
+                color: isMaxPlots ? "#3a2a10" : buyingItem === "plot" ? "#1a2a3d" : "#4a90d9",
+                cursor: anyBuying || isMaxPlots ? "not-allowed" : "pointer",
+                fontFamily:"inherit", fontSize:"11px", fontWeight:700,
+                display:"flex", alignItems:"center", gap:"6px",
+              }}
+            >
+              {buyingItem === "plot"
+                ? <><span style={{animation:"spin 0.8s linear infinite",display:"inline-block"}}>⟳</span> Buying…</>
+                : isMaxPlots ? "🔒 Max Reached" : "🏡 Buy Plot"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Energy Pack card */}
+      <div style={{
+        background:"#110e07",
+        border:"1px solid #2a2a0a",
+        borderRadius:"10px", padding:"14px",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom: wallet ? "12px" : "0" }}>
+          <div style={{ fontSize:"34px", flexShrink:0 }}>⚡</div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ fontSize:"13px", color:"#f0c060", fontWeight:700 }}>Energy Pack</div>
+              <div style={{
+                fontSize:"9px",
+                color: energyItems > 0 ? "#f0c060" : "#5a4020",
+                background: energyItems > 0 ? "#1a1400" : "transparent",
+                border:`1px solid ${energyItems > 0 ? "#2a2000" : "transparent"}`,
+                padding:"2px 8px", borderRadius:"20px",
+              }}>
+                {energyItems} owned
+              </div>
+            </div>
+            <div style={{ fontSize:"9px", color:"#5a4020", marginTop:"5px", lineHeight:1.8 }}>
+              +200 ⚡ instantly when used · Use the button in the Farm tab
+            </div>
+            <div style={{ fontSize:"11px", color:"#f0c060", marginTop:"4px", fontWeight:700 }}>$1.50 USDC</div>
+          </div>
+        </div>
+
+        {wallet && (
+          <div style={{
+            background:"#0d0a06", borderRadius:"8px", padding:"10px 12px",
+            border:"1px solid #1a1a06", display:"flex", justifyContent:"flex-end",
+          }}>
+            <button
+              onClick={() => buyItem("energy")}
+              disabled={anyBuying}
+              style={{
+                padding:"8px 20px",
+                background: buyingItem === "energy" ? "#0d0a06" : "#1a1a06",
+                border:`1px solid ${buyingItem === "energy" ? "#2a2000" : "#f0c060"}`,
+                borderRadius:"20px",
+                color: buyingItem === "energy" ? "#2a2000" : "#f0c060",
+                cursor: anyBuying ? "not-allowed" : "pointer",
+                fontFamily:"inherit", fontSize:"11px", fontWeight:700,
+                display:"flex", alignItems:"center", gap:"6px",
+              }}
+            >
+              {buyingItem === "energy"
+                ? <><span style={{animation:"spin 0.8s linear infinite",display:"inline-block"}}>⟳</span> Buying…</>
+                : "⚡ Buy Energy Pack"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── $PLOT SEEDS header ── */}
+      <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020" }}>
+        SEEDS — $PLOT TOKEN
+      </div>
 
       {/* Info */}
       <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px" }}>

@@ -7,6 +7,7 @@ export const CONFIG = {
   BASE_CHAIN_ID:         Number(import.meta.env.VITE_BASE_CHAIN_ID) || 84532,
   ALCHEMY_KEY:           import.meta.env.VITE_ALCHEMY_KEY || "",
   BACKEND_URL:           import.meta.env.VITE_BACKEND_URL || "http://localhost:3001",
+  USDC_ADDRESS:          import.meta.env.VITE_USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
 };
 
 export const ERC20_ABI = [
