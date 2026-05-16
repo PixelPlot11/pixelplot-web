@@ -1,6 +1,6 @@
 // src/components/Farm.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
-import { CROPS, MAX_ENERGY, REGEN_PER_SEC, getLevelData, getSellBonus, mkGrid, mkPlot } from "../lib/gameData";
+import { CROPS, MAX_ENERGY, REGEN_PER_SEC, getLevelData, getSellBonus, mkGrid, mkPlot, GRID_SIZE } from "../lib/gameData";
 
 const ACTIONS = [
   { id:"plant",   icon:"🌱", label:"Plant",   color:"#4caf50" },
