@@ -30,7 +30,7 @@ export default function Profile({
     if (!wallet || !CONFIG.ALCHEMY_KEY) return;
     async function fetchNFTs() {
       try {
-        const url  = `https://base-sepolia.g.alchemy.com/nft/v3/${CONFIG.ALCHEMY_KEY}/getNFTsForOwner?owner=${wallet.address}&withMetadata=true&pageSize=12`;
+        const url  = `https://base-mainnet.g.alchemy.com/nft/v3/${CONFIG.ALCHEMY_KEY}/getNFTsForOwner?owner=${wallet.address}&withMetadata=true&pageSize=12`;
         const res  = await fetch(url);
         const json = await res.json();
         const imgs = (json.ownedNfts || [])

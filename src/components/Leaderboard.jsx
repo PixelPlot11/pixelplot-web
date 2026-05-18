@@ -11,7 +11,7 @@ export default function Leaderboard({ wallet, leaderboard, lbLoading, loadLeader
     <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
       <div style={{ background:"#110e07", border:"1px solid #2a1e0a", borderRadius:"10px", padding:"12px",
         display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ fontSize:"11px", color:"#8a7050" }}>Top farmers · Base Sepolia</div>
+        <div style={{ fontSize:"11px", color:"#8a7050" }}>Top farmers · Base Mainnet</div>
         <button onClick={loadLeaderboard} style={{
           padding:"5px 12px", background:"transparent", border:"1px solid #2a1e0a",
           borderRadius:"20px", color:"#5a4020", cursor:"pointer", fontFamily:"inherit", fontSize:"9px",

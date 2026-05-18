@@ -3,11 +3,11 @@
 export const CONFIG = {
   PLOT_TOKEN_ADDRESS:    import.meta.env.VITE_PLOT_TOKEN_ADDRESS,
   GAME_CONTRACT_ADDRESS: import.meta.env.VITE_GAME_CONTRACT_ADDRESS,
-  BASE_RPC:              import.meta.env.VITE_BASE_RPC    || "https://sepolia.base.org",
-  BASE_CHAIN_ID:         Number(import.meta.env.VITE_BASE_CHAIN_ID) || 84532,
+  BASE_RPC:              import.meta.env.VITE_BASE_RPC    || "https://mainnet.base.org",
+  BASE_CHAIN_ID:         Number(import.meta.env.VITE_BASE_CHAIN_ID) || 8453,
   ALCHEMY_KEY:           import.meta.env.VITE_ALCHEMY_KEY || "",
   BACKEND_URL:           import.meta.env.VITE_BACKEND_URL || "http://localhost:3001",
-  USDC_ADDRESS:          import.meta.env.VITE_USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  USDC_ADDRESS:          import.meta.env.VITE_USDC_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
 };
 
 export const ERC20_ABI = [

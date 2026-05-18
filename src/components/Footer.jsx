@@ -6,8 +6,8 @@ const LINKS = {
     github:      "https://github.com/pixelplot",  // ganti dengan repo lo
     tokenomics:  "#tokenomics",                   // ganti dengan link doc
     whitepaper:  "#whitepaper",                   // ganti dengan link doc
-    basescan_token: "https://sepolia.basescan.org/address/0x753860887cC1c7B95581855243378088B30dEc0b",
-    basescan_game:  "https://sepolia.basescan.org/address/0xeb80b98eDA63Ba59cC8AA9868Fb245f65809BDC3",
+    basescan_token: "https://basescan.org/address/0x7ef06DD6737F33C86a6f67f91CdF80CeCc101BA3",
+    basescan_game:  "https://basescan.org/address/0x61D509A6966077FedfF1142a05a8045f82506061",
   };
   
   export default function Footer() {
@@ -43,7 +43,7 @@ const LINKS = {
   
         {/* Disclaimer */}
         <div style={{ fontSize:"8px", color:"#3a2a10", textAlign:"center", lineHeight:1.8 }}>
-          PixelPlot is a testnet game. All tokens are on Base Sepolia — no real monetary value.
+          PixelPlot is a Web3 farming game on Base Mainnet. $PLOT tokens have real value.
           <br/>
           Smart contracts are open source and verified on BaseScan. DYOR.
         </div>

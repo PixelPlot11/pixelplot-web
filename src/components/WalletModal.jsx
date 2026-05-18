@@ -64,7 +64,7 @@ export default function WalletModal({ onMetaMask, onWalletConnect, onClose, conn
         </div>
 
         <div style={{ fontSize:"9px", color:"#3a2a10", textAlign:"center", marginTop:"14px", lineHeight:1.8 }}>
-          Connect to Base Sepolia Testnet.<br/>
+          Connect to Base Mainnet.<br/>
           Make sure your wallet supports Base network.
         </div>
       </div>

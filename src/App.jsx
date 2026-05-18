@@ -22,11 +22,12 @@ const TABS = [
   { id:"LEADERBOARD", icon:"🏆" },
   { id:"PROFILE",     icon:"👤" },
   { id:"DOCS",        icon:"📋" },
-  { id:"ADMIN",       icon:"⚙️" },
 ];
 
+const isAdminRoute = window.location.pathname === "/admin";
+
 export default function App() {
-  const [tab, setTab]           = useState("FARM");
+  const [tab, setTab]           = useState(isAdminRoute ? "ADMIN" : "FARM");
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [log, setLog]     = useState(["🌍 PixelPlot — Connect wallet to start!"]);
@@ -184,7 +185,7 @@ export default function App() {
       <div style={{ background:"#110e07", borderBottom:"1px solid #2a1e0a", padding:"10px 14px 8px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: wallet ? "10px" : "0" }}>
           <div>
-            <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE SEPOLIA</div>
+            <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#5a4020" }}>BASE MAINNET</div>
             <div style={{ fontSize:"20px", fontWeight:900, color:"#f0c060", letterSpacing:"2px", textShadow:"0 0 16px #f0c06060" }}>
               🌾 PIXELPLOT
             </div>

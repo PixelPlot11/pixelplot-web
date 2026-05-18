@@ -212,21 +212,21 @@ export default function Docs({ tab: activeTab }) {
       {/* CONTRACTS */}
       {tab === "contracts" && (
         <div>
-          <Section title="DEPLOYED CONTRACTS (Base Sepolia Testnet)">
+          <Section title="DEPLOYED CONTRACTS (Base Mainnet)">
             <div style={{ fontSize:"9px", color:"#5a4020", marginBottom:"10px" }}>
               All contracts are verified and open source. Anyone can read the code on BaseScan.
             </div>
             {[
               {
-                name: "$PLOT Token (PLOTToken.sol)",
-                addr: "0x39D39db16082C448F074f08F89fc1f21602170c5",
-                url:  "https://sepolia.basescan.org/address/0x39D39db16082C448F074f08F89fc1f21602170c5#code",
-                desc: "ERC-20 token. Fixed 21M supply. No mint after deploy.",
+                name: "$PLOT Token (ERC-20)",
+                addr: "0x7ef06DD6737F33C86a6f67f91CdF80CeCc101BA3",
+                url:  "https://basescan.org/address/0x7ef06DD6737F33C86a6f67f91CdF80CeCc101BA3#code",
+                desc: "ERC-20 token used in PixelPlot game.",
               },
               {
                 name: "Game Contract (PixelPlotGame.sol)",
-                addr: "0xcD5295923BBFdDfe597230E421D9d3D9Bacf217b",
-                url:  "https://sepolia.basescan.org/address/0xcD5295923BBFdDfe597230E421D9d3D9Bacf217b#code",
+                addr: "0x61D509A6966077FedfF1142a05a8045f82506061",
+                url:  "https://basescan.org/address/0x61D509A6966077FedfF1142a05a8045f82506061#code",
                 desc: "Handles seed purchase (operator-signed), earnings, and withdrawal. ECDSA verified.",
               },
             ].map(c=>(

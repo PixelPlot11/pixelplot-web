@@ -309,18 +309,18 @@ export default function Market({ wallet, profile, inventory, buySeeds, buyingSee
         <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#5a4020", marginBottom:"8px" }}>CONTRACT</div>
         <div style={{ fontSize:"9px", color:"#5a4020", fontFamily:"monospace", lineHeight:2 }}>
           <div>$PLOT:{" "}
-            <a href={`https://sepolia.basescan.org/address/${CONFIG.PLOT_TOKEN_ADDRESS}`}
+            <a href={`https://basescan.org/address/${CONFIG.PLOT_TOKEN_ADDRESS}`}
               target="_blank" rel="noreferrer" style={{color:"#4a90d9"}}>
               {CONFIG.PLOT_TOKEN_ADDRESS?.slice(0,10)}…
             </a>
           </div>
           <div>Game:{" "}
-            <a href={`https://sepolia.basescan.org/address/${CONFIG.GAME_CONTRACT_ADDRESS}`}
+            <a href={`https://basescan.org/address/${CONFIG.GAME_CONTRACT_ADDRESS}`}
               target="_blank" rel="noreferrer" style={{color:"#4a90d9"}}>
               {CONFIG.GAME_CONTRACT_ADDRESS?.slice(0,10)}…
             </a>
           </div>
-          <div>Network: <span style={{color:"#4caf50"}}>Base Sepolia Testnet</span></div>
+          <div>Network: <span style={{color:"#4caf50"}}>Base Mainnet</span></div>
         </div>
       </div>
     </div>

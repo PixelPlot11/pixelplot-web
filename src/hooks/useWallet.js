@@ -37,13 +37,13 @@ export function useWallet() {
         try {
           await provider.send("wallet_addEthereumChain", [{
             chainId:         `0x${CONFIG.BASE_CHAIN_ID.toString(16)}`,
-            chainName:       "Base Sepolia",
+            chainName:       "Base",
             nativeCurrency:  { name:"ETH", symbol:"ETH", decimals:18 },
-            rpcUrls:         ["https://sepolia.base.org"],
-            blockExplorerUrls: ["https://sepolia.basescan.org"],
+            rpcUrls:         ["https://mainnet.base.org"],
+            blockExplorerUrls: ["https://basescan.org"],
           }]);
         } catch (e) {
-          throw new Error("Please switch to Base Sepolia network");
+          throw new Error("Please switch to Base network");
         }
       }
     }
