@@ -113,32 +113,32 @@ export default function AIChat({ executeCommand, gameState }) {
   }, [sendCommand]);
 
   return (
-    <div style={{
-      position: "fixed",
-      bottom: "56px",
-      left: 0,
-      right: 0,
-      zIndex: 39,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      pointerEvents: "none",
-    }}>
-      {/* Chat panel */}
+    <>
+      {/* Chat panel — above action bar */}
       {open && (
         <div style={{
-          width: "100%",
-          maxWidth: "480px",
-          height: "45vh",
-          minHeight: "280px",
-          background: "#0d0a06",
-          border: "1px solid #2a1e0a",
-          borderRadius: "10px 10px 0 0",
+          position: "fixed",
+          bottom: "52px",
+          left: 0,
+          right: 0,
+          zIndex: 45,
           display: "flex",
-          flexDirection: "column",
-          pointerEvents: "auto",
-          margin: "0 8px",
+          justifyContent: "center",
+          pointerEvents: "none",
         }}>
+          <div style={{
+            width: "100%",
+            maxWidth: "480px",
+            height: "45vh",
+            minHeight: "280px",
+            background: "#0d0a06",
+            border: "1px solid #2a1e0a",
+            borderRadius: "10px 10px 0 0",
+            display: "flex",
+            flexDirection: "column",
+            pointerEvents: "auto",
+            margin: "0 8px",
+          }}>
           {/* Header */}
           <div style={{
             padding: "8px 12px",
@@ -278,30 +278,32 @@ export default function AIChat({ executeCommand, gameState }) {
               </button>
             ))}
           </div>
+          </div>
         </div>
       )}
 
-      {/* Toggle button */}
+      {/* Toggle button — fixed bottom-right, always on top */}
       <button
         onClick={() => setOpen(!open)}
         style={{
-          background: open ? "#1a1206" : "#110e07",
+          position: "fixed",
+          bottom: "52px",
+          right: "12px",
+          zIndex: 46,
+          background: "#110e07",
           border: "1px solid #f0c060",
-          borderBottom: open ? "none" : "1px solid #f0c060",
-          borderRadius: open ? "8px 8px 0 0" : "8px 8px 0 0",
-          padding: "5px 14px",
+          borderRadius: "8px 8px 0 0",
+          padding: "6px 14px",
           color: "#f0c060",
-          fontSize: "9px",
+          fontSize: "10px",
           fontWeight: 700,
           cursor: "pointer",
           fontFamily: "inherit",
           letterSpacing: "1px",
-          pointerEvents: "auto",
-          marginTop: open ? 0 : "0",
         }}
       >
-        {open ? "▼ AI" : "▲ AI"}
+        {open ? "▼ AI" : "🤖 AI"}
       </button>
-    </div>
+    </>
   );
 }
