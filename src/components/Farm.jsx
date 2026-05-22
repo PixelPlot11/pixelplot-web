@@ -1,6 +1,8 @@
 // src/components/Farm.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CROPS, MAX_ENERGY, REGEN_PER_SEC, getLevelData, getSellBonus, mkGrid, mkPlot, GRID_SIZE } from "../lib/gameData";
+import { executeParsedCommand } from "../lib/aiCommands";
+import AIChat from "./AIChat";
 
 const ACTIONS = [
   { id:"plant",   icon:"🌱", label:"Plant",   color:"#4caf50" },
@@ -256,6 +258,54 @@ export default function Farm({
 
   const selectedC = CROPS[selectedCrop];
 
+  // Build grid summary for AI
+  const gridSummary = (() => {
+    let empty = 0, growing = 0, ready = 0, watered = 0;
+    for (let i = 0; i < activePlots; i++) {
+      const p = grid[i];
+      if (!p?.crop) { empty++; continue; }
+      if (p.ready) { ready++; continue; }
+      growing++;
+      if (p.watered) watered++;
+    }
+    return { empty, growing, ready, watered };
+  })();
+
+  const executeAICommand = useCallback(async (parsed, onProgress) => {
+    const ctx = {
+      grid,
+      energy: energyRef.current,
+      level,
+      activePlots,
+      inventory,
+      profile,
+      setGrid,
+      setEnergy,
+      spendSeed,
+      spendSeedOnBackend,
+      harvestOffChain,
+      onHarvest,
+      onAfterPlant,
+      showToast,
+      addLog,
+      onProgress,
+    };
+    return executeParsedCommand(parsed, ctx);
+  }, [grid, level, activePlots, inventory, profile,
+      spendSeed, spendSeedOnBackend, harvestOffChain,
+      onHarvest, onAfterPlant, showToast, addLog]);
+
+  const aiGameState = {
+    walletAddress: wallet?.address?.toLowerCase() || "",
+    level,
+    energy,
+    activePlots,
+    inventory,
+    gridSummary,
+    exp: profile?.exp || 0,
+    pendingEarnings: profile?.pending_earnings || 0,
+  };
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
 
@@ -443,6 +493,9 @@ export default function Farm({
         ))}
       </div>
       </div>
+
+      {/* AI Chat Assistant */}
+      <AIChat executeCommand={executeAICommand} gameState={aiGameState} />
     </div>
   );
 }
