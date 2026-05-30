@@ -54,7 +54,7 @@ export default function Docs({ tab: activeTab }) {
           <Section title="TOKEN OVERVIEW">
             <Row label="Token Name"    value="PixelPlot Token" />
             <Row label="Symbol"        value="$PLOT" color="#f0c060" />
-            <Row label="Total Supply"  value="21,000,000" color="#f0c060" />
+            <Row label="Total Supply"  value="1,000,000,000" color="#f0c060" />
             <Row label="Chain"         value="Base (Ethereum L2)" color="#4a90d9" />
             <Row label="Decimals"      value="18" />
             <Row label="Mint"          value="Fixed — no new mint ever" color="#4caf50" />
@@ -62,8 +62,9 @@ export default function Docs({ tab: activeTab }) {
 
           <Section title="DISTRIBUTION">
             {[
-              ["LP (Uniswap V4)", "6,300,000", "30%", "#4a90d9"],
-              ["Reward Pool",     "14,700,000","70%", "#4caf50"],
+              ["LP (Virtuals Protocol)", "300,000,000", "30%", "#4a90d9"],
+              ["Reward Pool",            "650,000,000", "65%", "#4caf50"],
+              ["Airdrop (Virtuals)",     "50,000,000",  "5%",  "#9c7adb"],
             ].map(([label, amount, pct, color]) => (
               <div key={label} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 0", borderBottom:"1px solid #1a1206" }}>
                 <div style={{ flex:1 }}>
@@ -79,8 +80,9 @@ export default function Docs({ tab: activeTab }) {
             ))}
             <div style={{ fontSize:"9px", color:"#3a2a10", marginTop:"10px", lineHeight:1.8 }}>
               ⚠️ No team allocation. No VC. No presale.<br/>
-              LP is single-sided ETH on Uniswap V4 — no $PLOT sold at launch.<br/>
-              Reward pool is locked in game contract — only released through gameplay.
+              LP launched on Virtuals Protocol — fair launch, no insider allocation.<br/>
+              Reward pool is locked in game contract — only released through gameplay.<br/>
+              5% airdrop distributed to early users via Virtuals.
             </div>
           </Section>
 
@@ -96,10 +98,10 @@ export default function Docs({ tab: activeTab }) {
           </Section>
 
           <Section title="LAUNCH">
-            <Row label="Platform"    value="Uniswap V4 (Ethereum L1)" />
-            <Row label="Pool type"   value="Single-sided ETH" color="#4caf50" />
+            <Row label="Platform"    value="Virtuals Protocol (Base)" />
+            <Row label="Pool type"   value="Fair launch — bonding curve" color="#4caf50" />
             <Row label="Start MCap"  value="~$10,000" color="#f0c060" />
-            <Row label="Listed via"  value="Bankr Bot" />
+            <Row label="Listed via"  value="Virtuals Protocol" color="#9c7adb" />
           </Section>
 
           <Section title="CROP ECONOMY">
